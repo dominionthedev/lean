@@ -16,12 +16,19 @@ build/
 # OS
 .DS_Store
 
-# lean internal state
-.lean/
-
-# Env files (important)
+# env files — never commit these
 .env
 .env.*
+
+# except templates and examples
+!.env.template
+!.env.example
+
+# lean state (optional — some teams may want to commit this)
+.lean/
+
+# lean temp
+.env.tmp
 
 # Crush
 .crush/

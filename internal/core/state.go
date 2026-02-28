@@ -10,6 +10,7 @@ type State struct {
 	Initialized bool     `json:"initialized"`
 	Current     string   `json:"current"`
 	Profiles    []string `json:"profiles"`
+	Templates   []string `json:"templates,omitempty"`
 	Version     string   `json:"version"`
 }
 
@@ -27,11 +28,9 @@ func LoadState() (*State, error) {
 	}
 
 	var s State
-	err = json.Unmarshal(data, &s)
-	if err != nil {
+	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, err
 	}
-
 	return &s, nil
 }
 
@@ -44,6 +43,5 @@ func SaveState(s *State) error {
 	if err != nil {
 		return err
 	}
-
 	return os.WriteFile(statePath(), data, 0644)
 }

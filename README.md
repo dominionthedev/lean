@@ -137,6 +137,36 @@ lean list
 
 ---
 
+### `lean edit`
+Open a profile in your editor.
+```bash
+lean edit
+lean edit prod
+```
+Uses `$EDITOR`, or defaults to common editors like `nano` or `vim`.
+
+---
+
+### `lean template`
+Manage environment templates. Auto-discovers `.env.template` and `.env.example`.
+```bash
+lean template list
+lean template add path/to/template
+lean template create-from .env.template --name prod
+```
+
+---
+
+### `lean format`
+Convert a profile to different formats.
+```bash
+lean format --type json
+lean format prod --type yaml
+```
+Supported types: `json`, `yaml`, `toml`, `env`.
+
+---
+
 ### `lean current`
 Show the active profile.
 ```bash
@@ -151,6 +181,15 @@ Restore `.env` from a backup. lean takes a snapshot every time `lean apply` runs
 lean restore              # interactive picker
 lean restore dev-20250228-143022.env   # direct
 ```
+
+---
+
+### `lean completion`
+Generate shell completion scripts.
+```bash
+source <(lean completion bash)
+```
+Supported shells: `bash`, `zsh`, `fish`, `powershell`.
 
 ---
 

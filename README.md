@@ -1,13 +1,15 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="lean logo" width="400">
+  <a href="https://github.com/dominionthedev/lean">
+    <img src="assets/logo.svg" alt="lean logo" width="400">
+  </a>
 </p>
 
-# lean ⚡
+# lean ⚡️
 
 [![CI](https://github.com/dominionthedev/lean/actions/workflows/ci.yml/badge.svg)](https://github.com/dominionthedev/lean/actions/workflows/ci.yml)
 [![Release](https://github.com/dominionthedev/lean/actions/workflows/release.yml/badge.svg)](https://github.com/dominionthedev/lean/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/dominionthedev/lean?color=205&label=latest)](https://github.com/dominionthedev/lean/releases)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/dominionthedev/lean)](https://go.dev)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/dominionthedev/lean)](https://pkg.go.dev/github.com/dominionthedev/lean)
 [![License](https://img.shields.io/github/license/dominionthedev/lean)](LICENSE)
 
 
@@ -137,6 +139,36 @@ lean list
 
 ---
 
+### `lean edit`
+Open a profile in your editor.
+```bash
+lean edit
+lean edit prod
+```
+Uses `$EDITOR`, or defaults to common editors like `nano` or `vim`.
+
+---
+
+### `lean template`
+Manage environment templates. Auto-discovers `.env.template` and `.env.example`.
+```bash
+lean template list
+lean template add path/to/template
+lean template create-from .env.template --name prod
+```
+
+---
+
+### `lean format`
+Convert a profile to different formats.
+```bash
+lean format --type json
+lean format prod --type yaml
+```
+Supported types: `json`, `yaml`, `toml`, `env`.
+
+---
+
 ### `lean current`
 Show the active profile.
 ```bash
@@ -151,6 +183,15 @@ Restore `.env` from a backup. lean takes a snapshot every time `lean apply` runs
 lean restore              # interactive picker
 lean restore dev-20250228-143022.env   # direct
 ```
+
+---
+
+### `lean completion`
+Generate shell completion scripts.
+```bash
+source <(lean completion bash)
+```
+Supported shells: `bash`, `zsh`, `fish`, `powershell`.
 
 ---
 
@@ -183,18 +224,6 @@ lean keeps a `.lean/` folder in your project:
 
 ---
 
-## Releasing
-
-lean uses [GoReleaser](https://goreleaser.com). To cut a release:
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-The release workflow builds binaries for Linux, macOS (Intel + Apple Silicon), and Windows — then attaches them to the GitHub release automatically.
-
----
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -204,3 +233,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+<p align="center">
+<a href="https://github.com/dominionthedev">GitHub</a> • <a href="https://dominionthedev.github.io">Website</a>
+</p>
+<p align="center">
+  <a href="https://github.com/dominionthedev/dominionthedev">
+    <img src="https://raw.githubusercontent.com/dominionthedev/dominionthedev/main/assets/watermark-animated.svg" width="700"/>
+  </a>
+</p>

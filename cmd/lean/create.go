@@ -87,6 +87,7 @@ var createCmd = &cobra.Command{
 				fmt.Println(ui.Fail("Failed to write profile: " + err.Error()))
 				return
 			}
+			engine.AddTemplate(createFrom)
 		} else {
 			// Empty profile
 			if err := os.WriteFile(envPath, []byte(""), 0644); err != nil {

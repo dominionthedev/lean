@@ -15,9 +15,9 @@ var rootCmd = &cobra.Command{
 	Long:  "lean manages and protects your environment profiles safely.",
 }
 
-func Execute(version string) {
+func Execute() {
 	// Set the version for the root command
-	rootCmd.Version = version
+	rootCmd.Version = Version
 	if err := fang.Execute(context.Background(), rootCmd); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -34,5 +34,9 @@ func init() {
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(setCmd)
 	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(templateCmd)
+	rootCmd.AddCommand(editCmd)
+	rootCmd.AddCommand(formatCmd)
+	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(versionCmd)
 }

@@ -2,9 +2,13 @@ package env
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/pelletier/go-toml/v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Entry struct {
@@ -131,4 +135,58 @@ func (f *File) Keys() []string {
 		}
 	}
 	return keys
+}
+
+// ToMap converts the file entries into a simple key-value map.
+func (f *File) ToMap() map[string]string {
+	m := make(map[string]string)
+	for _, e := range f.Entries {
+		if e.Key != "" {
+			m[e.Key] = e.Value
+		}
+	}
+	return m
+}
+
+// ToJSON returns the JSON representation of the environment variables.
+func (f *File) ToJSON() (string, error) {
+	data, err := json.MarshalIndent(f.ToMap(), "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// ToYAML returns the YAML representation of the environment variables.
+func (f *File) ToYAML() (string, error) {
+	data, err := yaml.Marshal(f.ToMap())
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// ToTOML returns the TOML representation of the environment variables.
+func (f *File) ToTOML() (string, error) {
+	data, err := toml.Marshal(f.ToMap())
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// ToString returns the env-style string representation of the file.
+func (f *File) ToString() string {
+	var sb strings.Builder
+	for _, e := range f.Entries {
+		switch {
+		case e.Blank:
+			sb.WriteString("\n")
+		case e.Comment != "":
+			sb.WriteString(e.Comment + "\n")
+		default:
+			sb.WriteString(fmt.Sprintf("%s=%s\n", e.Key, e.Value))
+		}
+	}
+	return sb.String()
 }

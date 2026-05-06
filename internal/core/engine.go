@@ -23,6 +23,7 @@ func Initialize() error {
 		Initialized: true,
 		Version:     "1.0.0",
 		Profiles:    []string{},
+		Templates:   []string{},
 	}
 	return SaveState(s)
 }
@@ -34,6 +35,16 @@ func (e *Engine) AddProfile(name string) error {
 		}
 	}
 	e.State.Profiles = append(e.State.Profiles, name)
+	return SaveState(e.State)
+}
+
+func (e *Engine) AddTemplate(path string) error {
+	for _, t := range e.State.Templates {
+		if t == path {
+			return nil // already registered
+		}
+	}
+	e.State.Templates = append(e.State.Templates, path)
 	return SaveState(e.State)
 }
 
@@ -76,6 +87,30 @@ func (e *Engine) ScanDisk() error {
 		if !known[profile] {
 			e.State.Profiles = append(e.State.Profiles, profile)
 			known[profile] = true
+		}
+	}
+
+	return SaveState(e.State)
+}
+
+func (e *Engine) ScanTemplates() error {
+	entries, err := os.ReadDir(".")
+	if err != nil {
+		return err
+	}
+
+	known := make(map[string]bool)
+	for _, t := range e.State.Templates {
+		known[t] = true
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if name == ".env.template" || name == ".env.example" {
+			if !known[name] {
+				e.State.Templates = append(e.State.Templates, name)
+				known[name] = true
+			}
 		}
 	}
 

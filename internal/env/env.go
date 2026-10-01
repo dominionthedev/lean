@@ -190,3 +190,152 @@ func (f *File) ToString() string {
 	}
 	return sb.String()
 }
+
+// Extends returns the parent profile name if a lean inheritance directive is present.
+// Supported forms (first match wins):
+//
+//	# lean:extends base
+//	# @extends base
+//	LEAN_EXTENDS=base
+func (f *File) Extends() string {
+	for _, e := range f.Entries {
+		if e.Comment != "" {
+			c := strings.TrimSpace(e.Comment)
+			c = strings.TrimPrefix(c, "#")
+			c = strings.TrimSpace(c)
+			lower := strings.ToLower(c)
+			if strings.HasPrefix(lower, "lean:extends") {
+				parts := strings.Fields(c)
+				if len(parts) >= 2 {
+					return parts[len(parts)-1]
+				}
+			}
+			if strings.HasPrefix(lower, "@extends") {
+				parts := strings.Fields(c)
+				if len(parts) >= 2 {
+					return parts[len(parts)-1]
+				}
+			}
+		}
+		if e.Key == "LEAN_EXTENDS" && e.Value != "" {
+			return e.Value
+		}
+	}
+	return ""
+}
+
+// Merge overlays child entries onto a copy of the parent.
+// Child keys override parent keys. Parent-only keys are kept;
+// LEAN_EXTENDS is stripped from the result.
+func (f *File) Merge(parent *File) *File {
+	if parent == nil {
+		return f
+	}
+
+	childKeys := make(map[string]bool)
+	for _, e := range f.Entries {
+		if e.Key != "" {
+			childKeys[e.Key] = true
+		}
+	}
+
+	merged := &File{Path: f.Path}
+
+	// Parent keys not overridden by child
+	for _, e := range parent.Entries {
+		if e.Key != "" && !childKeys[e.Key] {
+			merged.Entries = append(merged.Entries, e)
+		}
+	}
+
+	// All child entries — skip LEAN_EXTENDS and inheritance comments
+	for _, e := range f.Entries {
+		if e.Key == "LEAN_EXTENDS" {
+			continue
+		}
+		if e.Comment != "" {
+			c := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(e.Comment), "#"))
+			lower := strings.ToLower(c)
+			if strings.HasPrefix(lower, "lean:extends") || strings.HasPrefix(lower, "@extends") {
+				continue
+			}
+		}
+		merged.Entries = append(merged.Entries, e)
+	}
+
+	return merged
+}
+
+// Resolve loads a profile and walks its inheritance chain, returning the fully
+// merged File. Cycle detection is included. maxDepth guards against runaway chains.
+func Resolve(profile string) (*File, error) {
+	const maxDepth = 16
+	visited := make(map[string]bool)
+	return resolve(profile, visited, maxDepth)
+}
+
+func resolve(profile string, visited map[string]bool, depth int) (*File, error) {
+	if depth <= 0 {
+		return nil, fmt.Errorf("inheritance chain too deep (possible cycle involving '%s')", profile)
+	}
+	if visited[profile] {
+		return nil, fmt.Errorf("circular inheritance detected at profile '%s'", profile)
+	}
+	visited[profile] = true
+
+	path := ProfilePath(profile)
+	f, err := Parse(path)
+	if err != nil {
+		return nil, fmt.Errorf("profile '%s': %w", profile, err)
+	}
+
+	parent := f.Extends()
+	if parent == "" {
+		return f, nil
+	}
+
+	base, err := resolve(parent, visited, depth-1)
+	if err != nil {
+		return nil, err
+	}
+
+	return f.Merge(base), nil
+}
+
+// ProfilePath returns the conventional on-disk path for a named profile.
+func ProfilePath(name string) string {
+	if name == "current" || name == ".env" {
+		return ".env"
+	}
+	return ".env." + name
+}
+
+// DiffEntry holds one differing key between two profiles.
+type DiffEntry struct {
+	Key    string
+	Left   string
+	Right  string
+	Status string // "changed", "only-left", "only-right"
+}
+
+// Diff compares two key-value maps and returns entries that differ.
+func Diff(left, right map[string]string) []DiffEntry {
+	seen := make(map[string]bool)
+	var out []DiffEntry
+
+	for k, lv := range left {
+		seen[k] = true
+		rv, ok := right[k]
+		if !ok {
+			out = append(out, DiffEntry{Key: k, Left: lv, Status: "only-left"})
+		} else if lv != rv {
+			out = append(out, DiffEntry{Key: k, Left: lv, Right: rv, Status: "changed"})
+		}
+	}
+	for k, rv := range right {
+		if !seen[k] {
+			out = append(out, DiffEntry{Key: k, Right: rv, Status: "only-right"})
+		}
+	}
+	return out
+}

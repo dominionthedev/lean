@@ -59,6 +59,7 @@ Create a new environment profile.
 lean create --name staging
 lean create --name prod --from .env.template
 lean create --name test  --from .env.dev --strip   # keys only, no values
+lean create --name staging --extends base           # inherit from base
 lean create --interactive                           # guided prompt
 ```
 
@@ -67,6 +68,7 @@ lean create --interactive                           # guided prompt
 | `--name` | `-n` | Profile name |
 | `--from` | | Copy from a template or existing file |
 | `--strip` | `-s` | Strip values (keep keys only) |
+| `--extends` | | Inherit from a parent profile |
 | `--interactive` | `-i` | Prompt for name interactively |
 
 ---
@@ -183,6 +185,74 @@ Restore `.env` from a backup. lean takes a snapshot every time `lean apply` runs
 lean restore              # interactive picker
 lean restore dev-20250228-143022.env   # direct
 ```
+
+---
+
+### `lean diff`
+Compare two profiles after resolving inheritance.
+```bash
+lean diff dev prod
+lean diff current prod
+```
+```
+⚡ Diff  development  ↔  production
+
+PORT:
+  development: 8080
+  production: 80
+
+DEBUG:
+  development: true
+  production: false
+```
+
+---
+
+### `lean validate`
+Check that required keys exist in a profile. Schema is loaded from `--schema`, `.env.schema`, `.env.example`, or `.env.template`.
+```bash
+lean validate production
+lean validate staging --schema .env.schema
+```
+```
+✓ PORT
+✓ DB_HOST
+✗ JWT_SECRET missing
+✗ SMTP_PASSWORD missing
+```
+
+---
+
+### Profile inheritance
+Profiles can extend a parent so shared keys live in one place:
+
+```bash
+# .env.base
+APP_NAME=Lean
+PORT=8080
+
+# .env.development
+# lean:extends base
+DEBUG=true
+DB=localhost
+
+# .env.production
+# lean:extends base
+DEBUG=false
+DB=prod.internal
+PORT=80
+```
+
+```bash
+lean create --name staging --extends base
+lean apply production   # merges base + production → .env
+lean get PORT -p development   # 8080 (from base)
+```
+
+Supported directives (first match wins):
+- `# lean:extends base`
+- `# @extends base`
+- `LEAN_EXTENDS=base`
 
 ---
 

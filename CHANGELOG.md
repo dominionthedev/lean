@@ -9,6 +9,17 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Profile inheritance** — profiles can extend a parent via `# lean:extends <name>`, `# @extends <name>`, or `LEAN_EXTENDS=<name>`
+  - `lean apply` resolves the full inheritance chain before writing `.env`
+  - `lean get` / `lean format` resolve inherited values
+  - `lean create --extends <parent>` writes the directive automatically
+  - `lean list` shows inheritance arrows (`development → base`)
+  - Cycle detection and max-depth guard
+- `lean diff <left> <right>` — compare two profiles (supports `current` alias)
+- `lean validate [profile]` — check required keys against a schema
+  - Schema sources: `--schema`, `.env.schema`, `.env.example`, `.env.template`
+
 ---
 
 ## [0.1.0] — 2026-02-28

@@ -8,6 +8,7 @@ import (
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
 	"github.com/dominionthedev/lean/internal/ui"
+	"github.com/dominionthedev/lean/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,11 @@ Inheritance is declared in the profile file:
 		parent := ""
 		if raw, parseErr := env.Parse(src); parseErr == nil {
 			parent = raw.Extends()
+		}
+
+		// Remember this workspace → profile mapping
+		if cwd, err := os.Getwd(); err == nil {
+			_ = workspace.Remember(cwd, profile)
 		}
 
 		if prev != "" && prev != profile {

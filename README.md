@@ -181,9 +181,42 @@ lean current
 
 ### `lean restore`
 Restore `.env` from a backup. lean takes a snapshot every time `lean apply` runs.
+Also accepts named snapshot labels.
 ```bash
 lean restore              # interactive picker
+lean restore before-migration
 lean restore dev-20250228-143022.env   # direct
+```
+
+---
+
+### `lean snapshot`
+Save a named snapshot of the current `.env`.
+```bash
+lean snapshot before-migration
+lean snapshot before-testing
+lean snapshots                 # list named + automatic
+lean snapshot delete before-testing
+```
+
+---
+
+### `lean import`
+Workspace awareness — lean remembers which profile you last applied in each directory.
+```bash
+lean apply api-dev             # remembers ~/Projects/api → api-dev
+cd ~/Projects/api
+lean import                    # suggests / applies api-dev
+lean import --yes              # skip confirmation
+```
+
+---
+
+### `lean meta`
+View or set profile metadata (description, author, tags).
+```bash
+lean meta production
+lean meta production --description "Main production API" --author DominionDev --tags aws,production
 ```
 
 ---

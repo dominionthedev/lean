@@ -39,6 +39,10 @@ func init() {
 	rootCmd.AddCommand(formatCmd)
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(validateCmd)
+	rootCmd.AddCommand(snapshotCmd)
+	rootCmd.AddCommand(snapshotsCmd)
+	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(metaCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(versionCmd)
 }

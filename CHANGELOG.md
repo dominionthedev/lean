@@ -19,6 +19,17 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `lean diff <left> <right>` — compare two profiles (supports `current` alias)
 - `lean validate [profile]` — check required keys against a schema
   - Schema sources: `--schema`, `.env.schema`, `.env.example`, `.env.template`
+- **Named snapshots**
+  - `lean snapshot <name>` — save current `.env` under a human-readable name
+  - `lean snapshots` — list named + automatic snapshots
+  - `lean snapshot delete <name>` — remove a named snapshot
+  - `lean restore <name>` accepts bare named-snapshot labels
+- **Workspace awareness**
+  - `lean apply` remembers cwd → profile in `~/.config/lean/config.json`
+  - `lean import` applies the remembered profile for the current directory (`--yes` to skip confirm)
+- **Profile metadata**
+  - `lean meta [profile]` — view or set description, author, tags
+  - Stored in `.lean/state.json` under `meta`
 
 ---
 

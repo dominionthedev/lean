@@ -116,3 +116,20 @@ func (e *Engine) ScanTemplates() error {
 
 	return SaveState(e.State)
 }
+// SetMeta stores or updates metadata for a profile.
+func (e *Engine) SetMeta(name string, meta ProfileMeta) error {
+	if e.State.Meta == nil {
+		e.State.Meta = make(map[string]ProfileMeta)
+	}
+	e.State.Meta[name] = meta
+	return SaveState(e.State)
+}
+
+// GetMeta returns metadata for a profile, if any.
+func (e *Engine) GetMeta(name string) (ProfileMeta, bool) {
+	if e.State.Meta == nil {
+		return ProfileMeta{}, false
+	}
+	m, ok := e.State.Meta[name]
+	return m, ok
+}

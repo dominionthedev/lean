@@ -6,12 +6,21 @@ import (
 	"path/filepath"
 )
 
+// ProfileMeta holds optional metadata for a profile.
+type ProfileMeta struct {
+	Description string   `json:"description,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Created     string   `json:"created,omitempty"`
+}
+
 type State struct {
-	Initialized bool     `json:"initialized"`
-	Current     string   `json:"current"`
-	Profiles    []string `json:"profiles"`
-	Templates   []string `json:"templates,omitempty"`
-	Version     string   `json:"version"`
+	Initialized bool                    `json:"initialized"`
+	Current     string                  `json:"current"`
+	Profiles    []string                `json:"profiles"`
+	Templates   []string                `json:"templates,omitempty"`
+	Meta        map[string]ProfileMeta  `json:"meta,omitempty"`
+	Version     string                  `json:"version"`
 }
 
 const stateDir = ".lean"
@@ -30,6 +39,9 @@ func LoadState() (*State, error) {
 	var s State
 	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, err
+	}
+	if s.Meta == nil {
+		s.Meta = make(map[string]ProfileMeta)
 	}
 	return &s, nil
 }

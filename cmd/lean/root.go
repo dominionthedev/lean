@@ -37,6 +37,8 @@ func init() {
 	rootCmd.AddCommand(templateCmd)
 	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(formatCmd)
+	rootCmd.AddCommand(diffCmd)
+	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(versionCmd)
 }

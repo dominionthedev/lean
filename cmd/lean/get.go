@@ -39,8 +39,7 @@ Examples:
 			return
 		}
 
-		profilePath := ".env." + target
-		f, err := env.Parse(profilePath)
+		f, err := env.Resolve(target)
 		if err != nil {
 			fmt.Println(ui.Fail(fmt.Sprintf("Could not read profile '%s': %s", target, err)))
 			return

@@ -35,8 +35,7 @@ var formatCmd = &cobra.Command{
 			return
 		}
 
-		path := ".env." + profile
-		f, err := env.Parse(path)
+		f, err := env.Resolve(profile)
 		if err != nil {
 			fmt.Println(ui.Fail(fmt.Sprintf("Failed to read profile: %s", err)))
 			return

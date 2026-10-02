@@ -7,7 +7,9 @@ import (
 	"strings"
 )
 
-type Engine struct{ State *State }
+type Engine struct {
+	State *State
+}
 
 func NewEngine() (*Engine, error) {
 	state, err := LoadState()
@@ -18,7 +20,12 @@ func NewEngine() (*Engine, error) {
 }
 
 func Initialize() error {
-	s := &State{Initialized: true, Version: "1.0.0", Profiles: []string{}, Templates: []string{}}
+	s := &State{
+		Initialized: true,
+		Version:     "1.0.0",
+		Profiles:    []string{},
+		Templates:   []string{},
+	}
 	return SaveState(s)
 }
 
@@ -67,67 +74,80 @@ func (e *Engine) ProfileExists(name string) bool {
 	return false
 }
 
-func (e *Engine) SetCurrent(name string) error { e.State.Current = name; return SaveState(e.State) }
+func (e *Engine) SetCurrent(name string) error {
+	e.State.Current = name
+	return SaveState(e.State)
+}
 
+// ScanDisk discovers root .env.<profile> files and keeps the state registry in sync
+// with profiles that exist. It intentionally does not delete missing profiles from
+// state; callers must ask the user before removing stale profile registrations.
 func (e *Engine) ScanDisk() error {
-	if err := os.MkdirAll(filepath.Join(".lean", "profiles"), 0700); err != nil {
-		return err
-	}
-	known := make(map[string]bool)
-	for _, p := range e.State.Profiles {
-		known[p] = true
-	}
-
-	// Migrate legacy .env.<name> files into .lean/profiles/<name>.env.
 	entries, err := os.ReadDir(".")
 	if err != nil {
 		return err
 	}
+
+	// Older development versions briefly stored profiles under .lean/profiles.
+	// Move those files back to the normal root .env.<name> layout when possible.
+	legacyDir := filepath.Join(".lean", "profiles")
+	if legacyEntries, err := os.ReadDir(legacyDir); err == nil {
+		for _, entry := range legacyEntries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".env") {
+				continue
+			}
+			name := strings.TrimSuffix(entry.Name(), ".env")
+			src := filepath.Join(legacyDir, entry.Name())
+			dst := ProfileFilePath(name)
+			if _, err := os.Stat(dst); os.IsNotExist(err) {
+				if err := os.Rename(src, dst); err != nil {
+					data, readErr := os.ReadFile(src)
+					if readErr == nil {
+						if writeErr := os.WriteFile(dst, data, 0600); writeErr == nil {
+							_ = os.Remove(src)
+						}
+					}
+				}
+			}
+		}
+		_ = os.Remove(legacyDir)
+	}
+
+	known := make(map[string]bool, len(e.State.Profiles))
+	for _, p := range e.State.Profiles {
+		known[p] = true
+	}
+
 	for _, entry := range entries {
 		name := entry.Name()
 		if !strings.HasPrefix(name, ".env.") {
 			continue
 		}
 		profile := strings.TrimPrefix(name, ".env.")
-		if profile == "tmp" || profile == "template" || profile == "example" {
+		if profile == "tmp" || profile == "template" || profile == "example" || profile == "" {
 			continue
 		}
-		dst := filepath.Join(".lean", "profiles", profile+".env")
-		if _, err := os.Stat(dst); os.IsNotExist(err) {
-			if data, err := os.ReadFile(name); err == nil {
-				if err := os.WriteFile(dst, data, 0600); err == nil {
-					_ = os.Remove(name)
-				}
-			}
-		}
-		known[profile] = true
-	}
-	entries, err = os.ReadDir(filepath.Join(".lean", "profiles"))
-	if err != nil {
-		return err
-	}
-	disk := make(map[string]bool)
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".env") {
-			continue
-		}
-		name := strings.TrimSuffix(entry.Name(), ".env")
-		disk[name] = true
-		if !known[name] {
-			e.State.Profiles = append(e.State.Profiles, name)
-			known[name] = true
+		if !known[profile] {
+			e.State.Profiles = append(e.State.Profiles, profile)
+			known[profile] = true
 		}
 	}
-	var kept []string
-	for _, p := range e.State.Profiles {
-		if disk[p] {
-			kept = append(kept, p)
-		} else if e.State.Current == p {
-			e.State.Current = ""
-		}
-	}
-	e.State.Profiles = kept
+
 	return SaveState(e.State)
+}
+
+func (e *Engine) MissingProfiles() []string {
+	var missing []string
+	for _, profile := range e.State.Profiles {
+		if _, err := os.Stat(ProfileFilePath(profile)); os.IsNotExist(err) {
+			missing = append(missing, profile)
+		}
+	}
+	return missing
+}
+
+func ProfileFilePath(name string) string {
+	return ".env." + name
 }
 
 func (e *Engine) ScanTemplates() error {

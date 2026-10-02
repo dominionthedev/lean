@@ -12,6 +12,8 @@ import (
 var (
 	cfgDefaultProfile   string
 	cfgSchemaPath       string
+	cfgEditor           string
+	cfgOutputFormat     string
 	cfgSecretsBackend   string
 	cfgSecretsRecipient string
 	cfgSecretsIdentity  string
@@ -36,7 +38,10 @@ var configCmd = &cobra.Command{
 		}
 		fmt.Printf("  %s %d\n", ui.Faint("version"), cfg.Lean.Version)
 		fmt.Printf("  %s %s\n", ui.Faint("default_profile"), orDash(cfg.Lean.DefaultProfile))
+		fmt.Printf("  %s %s\n", ui.Faint("editor"), orDash(cfg.Lean.Editor))
+		fmt.Printf("  %s %s\n", ui.Faint("profiles.active_file"), cfg.Profiles.ActiveFile)
 		fmt.Printf("  %s %s\n", ui.Faint("schema.path"), cfg.Schema.Path)
+		fmt.Printf("  %s %s\n", ui.Faint("output.format"), cfg.Output.Format)
 		fmt.Printf("  %s %s\n", ui.Faint("secrets.backend"), cfg.Secrets.Backend)
 		fmt.Printf("  %s %s\n", ui.Faint("secrets.recipient"), orDash(cfg.Secrets.Recipient))
 		fmt.Printf("  %s %s\n", ui.Faint("secrets.identity"), orDash(cfg.Secrets.Identity))
@@ -50,6 +55,11 @@ var configInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a local or global configuration interactively",
 	Run: func(cmd *cobra.Command, args []string) {
+		cfgDefaultProfile = ""
+		cfgSchemaPath = ".lean/schema.toml"
+		cfgOutputFormat = "text"
+		cfgEditor = ""
+
 		var scope string
 		if cfgGlobal {
 			scope = "global"
@@ -57,12 +67,17 @@ var configInitCmd = &cobra.Command{
 			scope = "local"
 		}
 		form := huh.NewForm(huh.NewGroup(
-			huh.NewSelect[string]().Title("Configuration scope").Description("Local settings belong to this project; global settings are user defaults.").Options(
-			huh.NewOption("Local project (.lean/lean.toml)", "local"),
-			huh.NewOption("Global user (~/.lean/lean.toml)", "global"),
-		).Value(&scope),
-			huh.NewInput().Title("Default profile").Description("Used when a command needs a profile and none is specified.").Value(&cfgDefaultProfile),
+			huh.NewSelect[string]().Title("Configuration scope").Description("Local settings override global settings.").Options(
+				huh.NewOption("Local project (.lean/lean.toml)", "local"),
+				huh.NewOption("Global user (~/.lean/lean.toml)", "global"),
+			).Value(&scope),
+			huh.NewInput().Title("Default profile").Description("Used when no profile is specified.").Value(&cfgDefaultProfile),
 			huh.NewInput().Title("Schema path").Value(&cfgSchemaPath),
+			huh.NewInput().Title("Editor command (optional)").Description("Leave empty to use $EDITOR or a detected editor.").Value(&cfgEditor),
+			huh.NewSelect[string]().Title("Output format").Options(
+				huh.NewOption("Text", "text"),
+				huh.NewOption("JSON", "json"),
+			).Value(&cfgOutputFormat),
 		))
 		if err := form.Run(); err != nil {
 			fmt.Println(ui.Fail("Interrupted."))
@@ -74,7 +89,7 @@ var configInitCmd = &cobra.Command{
 			var err error
 			path, err = config.GlobalPath()
 			if err != nil {
-				fmt.Println(ui.Fail("Cannot determine home directory: " + err.Error()))
+				fmt.Println(ui.Fail("Cannot determine global config path: " + err.Error()))
 				return
 			}
 		}
@@ -85,9 +100,9 @@ var configInitCmd = &cobra.Command{
 
 		cfg := config.Default()
 		cfg.Lean.DefaultProfile = cfgDefaultProfile
-		if cfgSchemaPath != "" {
-			cfg.Schema.Path = cfgSchemaPath
-		}
+		cfg.Lean.Editor = cfgEditor
+		cfg.Output.Format = cfgOutputFormat
+		cfg.Schema.Path = cfgSchemaPath
 		if err := configureSecurity(cfg); err != nil {
 			fmt.Println(ui.Fail("Security setup failed: " + err.Error()))
 			return
@@ -114,8 +129,16 @@ var configSetCmd = &cobra.Command{
 			cfg.Lean.DefaultProfile = cfgDefaultProfile
 			changed = true
 		}
+		if cmd.Flags().Changed("editor") {
+			cfg.Lean.Editor = cfgEditor
+			changed = true
+		}
 		if cmd.Flags().Changed("schema-path") {
 			cfg.Schema.Path = cfgSchemaPath
+			changed = true
+		}
+		if cmd.Flags().Changed("output-format") {
+			cfg.Output.Format = cfgOutputFormat
 			changed = true
 		}
 		if cmd.Flags().Changed("secrets-backend") {
@@ -157,7 +180,9 @@ func init() {
 	configInitCmd.Flags().BoolVarP(&cfgGlobal, "global", "g", false, "Create global config")
 	configInitCmd.Flags().BoolVarP(&cfgInteractive, "interactive", "i", true, "Create the config interactively")
 	configSetCmd.Flags().StringVar(&cfgDefaultProfile, "default-profile", "", "Default profile name")
+	configSetCmd.Flags().StringVar(&cfgEditor, "editor", "", "Editor command")
 	configSetCmd.Flags().StringVar(&cfgSchemaPath, "schema-path", "", "Path to schema.toml")
+	configSetCmd.Flags().StringVar(&cfgOutputFormat, "output-format", "", "Output format: text | json")
 	configSetCmd.Flags().StringVar(&cfgSecretsBackend, "secrets-backend", "", "Secrets backend: local | gpg | age | ssh")
 	configSetCmd.Flags().StringVar(&cfgSecretsRecipient, "secrets-recipient", "", "GPG/age recipient or SSH public-key path")
 	configSetCmd.Flags().StringVar(&cfgSecretsIdentity, "secrets-identity", "", "Age identity or SSH private-key path")

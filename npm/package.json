@@ -1,6 +1,6 @@
 {
   "name": "@dominionthedev/lean",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "A lightweight, expressive environment profile manager.",
   "bin": {
     "lean": "bin/lean.js"

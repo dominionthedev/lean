@@ -1,0 +1,34 @@
+{
+  "name": "@dominionthedev/lean",
+  "version": "0.1.0",
+  "description": "A lightweight, expressive environment profile manager.",
+  "bin": {
+    "lean": "bin/lean.js"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dominionthedev/lean.git"
+  },
+  "homepage": "https://dominiondev.leraniode.org",
+  "bugs": {
+    "url": "https://github.com/dominionthedev/lean/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "cli",
+    "environment",
+    "env",
+    "dotenv",
+    "configuration",
+    "secrets"
+  ]
+}

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/dominionthedev/lean/internal/backup"
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
 	"github.com/dominionthedev/lean/internal/ui"
@@ -33,7 +32,10 @@ var createCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Not initialized. Run lean init first."))
 			return
 		}
-		_ = engine.ScanDisk()
+		if err := engine.ScanDisk(); err != nil {
+			fmt.Println(ui.Fail("Could not scan profiles: " + err.Error()))
+			return
+		}
 		if createInteractive || createName == "" {
 			form := huh.NewForm(huh.NewGroup(
 				huh.NewInput().Title("Profile name").Placeholder("staging").Value(&createName),
@@ -83,7 +85,7 @@ var createCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Failed to register profile: " + err.Error()))
 			return
 		}
-		_ = backup.SnapshotProfile(createName, envPath)
+
 		var parts []string
 		if createFrom != "" {
 			part := "from " + createFrom

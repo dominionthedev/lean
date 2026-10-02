@@ -1,0 +1,26 @@
+[keys.APP_NAME]
+required = true
+
+[keys.APP_ENV]
+required = true
+values = ["development", "test", "staging", "production"]
+
+[keys.PORT]
+required = true
+default = "3000"
+
+[keys.DEBUG]
+values = ["true", "false"]
+default = "false"
+
+[keys.DATABASE_URL]
+required = true
+
+[keys.REDIS_URL]
+required = true
+
+[keys.API_KEY]
+secret = true
+
+[keys.JWT_SECRET]
+secret = true

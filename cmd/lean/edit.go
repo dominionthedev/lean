@@ -3,8 +3,6 @@ package lean
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
 
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
@@ -14,7 +12,7 @@ import (
 
 var editCmd = &cobra.Command{
 	Use:   "edit [profile]",
-	Short: "Open a profile in your editor",
+	Short: "Open a profile in your configured editor",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		engine, err := core.NewEngine()
@@ -36,30 +34,7 @@ var editCmd = &cobra.Command{
 			confirmStaleProfile(engine, profile)
 			return
 		}
-
-		editor := os.Getenv("EDITOR")
-		if editor == "" {
-			if runtime.GOOS == "windows" {
-				editor = "notepad"
-			} else {
-				for _, candidate := range []string{"nano", "vim", "vi"} {
-					if _, err := exec.LookPath(candidate); err == nil {
-						editor = candidate
-						break
-					}
-				}
-			}
-		}
-		if editor == "" {
-			fmt.Println(ui.Fail("Could not find an editor. Set EDITOR."))
-			return
-		}
-
-		c := exec.Command(editor, path)
-		c.Stdin = os.Stdin
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		if err := c.Run(); err != nil {
+		if err := openEditor(path); err != nil {
 			fmt.Println(ui.Fail(fmt.Sprintf("Failed to open editor: %s", err)))
 			return
 		}

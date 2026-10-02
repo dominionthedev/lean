@@ -11,23 +11,23 @@ import (
 const DefaultPath = ".lean/lean.toml"
 
 type Config struct {
-	Lean    LeanSection    \`toml:"lean"\`
-	Schema  SchemaSection  \`toml:"schema"\`
-	Secrets SecretsSection \`toml:"secrets"\`
+	Lean LeanSection `toml:"lean"`
+	Schema SchemaSection `toml:"schema"`
+	Secrets SecretsSection `toml:"secrets"`
 }
 
 type LeanSection struct {
-	Version int \`toml:"version"\`
-	DefaultProfile string \`toml:"default_profile"\`
+	Version int `toml:"version"`
+	DefaultProfile string `toml:"default_profile"`
 }
 
-type SchemaSection struct { Path string \`toml:"path"\` }
+type SchemaSection struct { Path string `toml:"path"` }
 
 type SecretsSection struct {
-	Backend string \`toml:"backend"\`
-	Recipient string \`toml:"recipient"\`
-	Identity string \`toml:"identity"\`
-	MasterKeyFile string \`toml:"master_key_file"\`
+	Backend string `toml:"backend"`
+	Recipient string `toml:"recipient"`
+	Identity string `toml:"identity"`
+	MasterKeyFile string `toml:"master_key_file"`
 }
 
 func Default() *Config {

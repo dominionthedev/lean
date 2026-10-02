@@ -1,0 +1,31 @@
+name: NPM Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Set package version
+        working-directory: npm
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+
+      - name: Publish
+        run: npm publish ./npm --access public --provenance

@@ -172,7 +172,7 @@ Aliases: `del`, `rm`
 ---
 
 ### `lean list`
-List all known profiles. Auto-discovers any `.env.*` files on disk.
+List all known profiles. Profiles are stored under `.lean/profiles/`; legacy `.env.*` files are migrated automatically.
 ```bash
 lean list
 ```
@@ -183,6 +183,16 @@ lean list
   · prod
   · staging
 ```
+
+---
+
+### `lean profile`
+Manage profile lifecycle.
+```bash
+lean profile delete staging
+lean profile restore staging
+```
+Deleting a profile creates a profile backup first. Restore recovers the latest Lean-managed snapshot.
 
 ---
 
@@ -267,9 +277,11 @@ lean meta production --description "Main production API" --author DominionDev --
 ---
 
 ### `lean config`
-Project-level configuration via `lean.toml`.
+Configuration lives in `.lean/lean.toml` for a project, with an optional global `~/.lean/lean.toml`. Local configuration overrides global configuration.
 ```bash
-lean config init
+lean config init                 # interactive: choose local or global
+lean config init --global        # create global config directly
+lean config init --interactive   # configure settings interactively
 lean config
 lean config set --default-profile development
 lean config set --secrets-backend gpg --secrets-recipient you@example.com
@@ -457,13 +469,17 @@ lean version
 
 ## How it works
 
-lean keeps a `.lean/` folder in your project:
+lean keeps its managed state inside `.lean/`:
 ```
 .lean/
+  lean.toml        ← local project configuration
   state.json       ← active profile, registered profiles, metadata, version
-  backups/         ← timestamped + named .env snapshots
+  profiles/        ← managed environment profiles (*.env)
+  backups/         ← .env snapshots + profile snapshots
   contexts/        ← multi-file context definitions (*.json)
 ```
+
+An optional global configuration is stored at `~/.lean/lean.toml`. Local configuration takes precedence.
 
 `state.json` and `contexts/` are safe to commit. The backups folder is local only.
 Workspace mappings live in `~/.config/lean/config.json`.
@@ -474,6 +490,7 @@ Workspace mappings live in `~/.config/lean/config.json`.
 
 - **Atomic writes** — lean never writes directly to `.env`. It writes to a temp file and renames, so a crash mid-write can't corrupt your env.
 - **Backup on apply** — every `lean apply` snapshots the current `.env` before replacing it. Run `lean restore` to get it back.
+- **Profile backups** — Lean snapshots profiles before Lean-managed edits and deletion. `lean profile restore <name>` restores the latest snapshot; edits made outside Lean are not retroactively captured.
 - **`.gitignore` aware** — lean's own `.gitignore` excludes `.env` and `.env.*` by default, keeping secrets off GitHub.
 
 ---

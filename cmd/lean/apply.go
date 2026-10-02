@@ -33,6 +33,8 @@ Inheritance is declared in the profile file:
 			return
 		}
 
+		_ = engine.ScanDisk()
+
 		src := env.ProfilePath(profile)
 		if _, err := os.Stat(src); err != nil {
 			fmt.Println(ui.Fail(fmt.Sprintf("Profile '%s' not found. Is there a %s file?", profile, src)))

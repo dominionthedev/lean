@@ -9,6 +9,25 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-02
+
+### Added
+- **Profile inheritance** with cycle detection and resolved values across `apply`, `get`, and `format`
+- `lean diff` for comparing resolved profiles
+- `lean validate` with schema discovery and advanced validation rules
+- **Named snapshots** and named restore points
+- **Workspace awareness** with remembered profile mappings and `lean import`
+- **Profile metadata** via `lean meta`
+- **Contexts** for applying coordinated multi-file environment changes
+- **Project configuration** through `lean.toml`
+- **Advanced schemas** with required keys, enums, defaults, relationships, conditionals, sources, and secret fields
+- **Encrypted secrets** with local AES-GCM, GPG, age, and SSH-backed storage
+- Secure local master-key handling through `~/.lean/key`
+- Man-page generation through `lean man --generate`
+- **NPM installation** through `@dominionthedev/lean`, with platform-specific release binaries and checksum verification
+- **Templates and examples** in the repository's `examples/` directory
+
+
 ### Added
 - **Profile inheritance** — profiles can extend a parent via `# lean:extends <name>`, `# @extends <name>`, or `LEAN_EXTENDS=<name>`
   - `lean apply` resolves the full inheritance chain before writing `.env`
@@ -87,5 +106,7 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI workflow — build, vet, and cross-compile on push and pull requests
 - Release workflow — GoReleaser on tag push, binaries for Linux / macOS / Windows
 
-[Unreleased]: https://github.com/dominionthedev/lean/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dominionthedev/lean/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dominionthedev/lean/releases/tag/v0.3.0
+[0.2.0]: https://github.com/dominionthedev/lean/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dominionthedev/lean/releases/tag/v0.1.0

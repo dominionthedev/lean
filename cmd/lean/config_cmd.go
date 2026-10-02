@@ -21,7 +21,8 @@ var (
 )
 
 var configCmd = &cobra.Command{
-	Use: "config", Short: "View or initialize lean configuration",
+	Use:   "config",
+	Short: "View and manage Lean configuration",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -30,49 +31,46 @@ var configCmd = &cobra.Command{
 		}
 		fmt.Printf("%s lean.toml\n\n", ui.Bolt())
 		if !config.Exists("") {
-			fmt.Println(ui.Faint("  (using defaults — run lean config init to write local config)"))
+			fmt.Println(ui.Faint("  (using defaults — run `lean config init` to create local config)"))
 			fmt.Println()
 		}
 		fmt.Printf("  %s %d\n", ui.Faint("version"), cfg.Lean.Version)
 		fmt.Printf("  %s %s\n", ui.Faint("default_profile"), orDash(cfg.Lean.DefaultProfile))
 		fmt.Printf("  %s %s\n", ui.Faint("schema.path"), cfg.Schema.Path)
 		fmt.Printf("  %s %s\n", ui.Faint("secrets.backend"), cfg.Secrets.Backend)
-		if cfg.Secrets.Recipient != "" {
-			fmt.Printf("  %s %s\n", ui.Faint("secrets.recipient"), cfg.Secrets.Recipient)
+		fmt.Printf("  %s %s\n", ui.Faint("secrets.recipient"), orDash(cfg.Secrets.Recipient))
+		fmt.Printf("  %s %s\n", ui.Faint("secrets.identity"), orDash(cfg.Secrets.Identity))
+		if cfg.Secrets.Backend == "local" {
+			fmt.Printf("  %s %s\n", ui.Faint("secrets.master_key_file"), orDash(cfg.Secrets.MasterKeyFile))
 		}
-		if cfg.Secrets.Identity != "" {
-			fmt.Printf("  %s %s\n", ui.Faint("secrets.identity"), cfg.Secrets.Identity)
-		}
-		fmt.Printf("  %s %s\n", ui.Faint("secrets.master_key_file"), orDash(cfg.Secrets.MasterKeyFile))
 	},
 }
 
 var configInitCmd = &cobra.Command{
-	Use: "init", Short: "Create a local or global lean.toml",
+	Use:   "init",
+	Short: "Create a local or global configuration interactively",
 	Run: func(cmd *cobra.Command, args []string) {
-		global := cfgGlobal
-		if cfgInteractive || (!cmd.Flags().Changed("global") && !cfgInteractive) {
-			var scope string
-			if cfgGlobal {
-				scope = "global"
-			} else {
-				scope = "local"
-			}
-			form := huh.NewForm(huh.NewGroup(
-				huh.NewSelect[string]().Title("Configuration scope").Options(
-					huh.NewOption("Local project (.lean/lean.toml)", "local"),
-					huh.NewOption("Global user (~/.lean/lean.toml)", "global"),
-				).Value(&scope),
-			))
-			if err := form.Run(); err != nil {
-				fmt.Println(ui.Fail("Interrupted."))
-				return
-			}
-			global = scope == "global"
-			cfgInteractive = true
+		var scope string
+		if cfgGlobal {
+			scope = "global"
+		} else {
+			scope = "local"
 		}
+		form := huh.NewForm(huh.NewGroup(
+			huh.NewSelect[string]().Title("Configuration scope").Description("Local settings belong to this project; global settings are user defaults.").Options(
+			huh.NewOption("Local project (.lean/lean.toml)", "local"),
+			huh.NewOption("Global user (~/.lean/lean.toml)", "global"),
+		).Value(&scope),
+			huh.NewInput().Title("Default profile").Description("Used when a command needs a profile and none is specified.").Value(&cfgDefaultProfile),
+			huh.NewInput().Title("Schema path").Value(&cfgSchemaPath),
+		))
+		if err := form.Run(); err != nil {
+			fmt.Println(ui.Fail("Interrupted."))
+			return
+		}
+
 		path := config.LocalPath()
-		if global {
+		if scope == "global" {
 			var err error
 			path, err = config.GlobalPath()
 			if err != nil {
@@ -81,22 +79,18 @@ var configInitCmd = &cobra.Command{
 			}
 		}
 		if config.Exists(path) {
-			fmt.Println(ui.Warn(path + " already exists."))
+			fmt.Println(ui.Warn(path + " already exists. Use `lean config edit` to change it."))
 			return
 		}
+
 		cfg := config.Default()
-		if cfgInteractive {
-			form := huh.NewForm(huh.NewGroup(
-				huh.NewInput().Title("Default profile (optional)").Value(&cfg.Lean.DefaultProfile),
-				huh.NewInput().Title("Schema path").Value(&cfg.Schema.Path),
-				huh.NewSelect[string]().Title("Secrets backend").Options(
-					huh.NewOption("Local", "local"), huh.NewOption("GPG", "gpg"), huh.NewOption("age", "age"), huh.NewOption("SSH", "ssh"),
-				).Value(&cfg.Secrets.Backend),
-			))
-			if err := form.Run(); err != nil {
-				fmt.Println(ui.Fail("Interrupted."))
-				return
-			}
+		cfg.Lean.DefaultProfile = cfgDefaultProfile
+		if cfgSchemaPath != "" {
+			cfg.Schema.Path = cfgSchemaPath
+		}
+		if err := configureSecurity(cfg); err != nil {
+			fmt.Println(ui.Fail("Security setup failed: " + err.Error()))
+			return
 		}
 		if err := config.Save(path, cfg); err != nil {
 			fmt.Println(ui.Fail("Failed to write config: " + err.Error()))
@@ -107,7 +101,8 @@ var configInitCmd = &cobra.Command{
 }
 
 var configSetCmd = &cobra.Command{
-	Use: "set", Short: "Update lean.toml settings",
+	Use:   "set",
+	Short: "Update individual configuration settings",
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.Load("")
 		if err != nil {
@@ -157,15 +152,16 @@ func orDash(s string) string {
 	}
 	return s
 }
+
 func init() {
-	configInitCmd.Flags().BoolVarP(&cfgGlobal, "global", "g", false, "Create global config in ~/.lean")
-	configInitCmd.Flags().BoolVarP(&cfgInteractive, "interactive", "i", false, "Create the config interactively")
+	configInitCmd.Flags().BoolVarP(&cfgGlobal, "global", "g", false, "Create global config")
+	configInitCmd.Flags().BoolVarP(&cfgInteractive, "interactive", "i", true, "Create the config interactively")
 	configSetCmd.Flags().StringVar(&cfgDefaultProfile, "default-profile", "", "Default profile name")
 	configSetCmd.Flags().StringVar(&cfgSchemaPath, "schema-path", "", "Path to schema.toml")
 	configSetCmd.Flags().StringVar(&cfgSecretsBackend, "secrets-backend", "", "Secrets backend: local | gpg | age | ssh")
-	configSetCmd.Flags().StringVar(&cfgSecretsRecipient, "secrets-recipient", "", "GPG/age recipient or SSH .pub path")
-	configSetCmd.Flags().StringVar(&cfgSecretsIdentity, "secrets-identity", "", "Age identity / SSH private key path")
-	configSetCmd.Flags().StringVar(&cfgMasterKeyFile, "master-key-file", "", "Path to master key file")
+	configSetCmd.Flags().StringVar(&cfgSecretsRecipient, "secrets-recipient", "", "GPG/age recipient or SSH public-key path")
+	configSetCmd.Flags().StringVar(&cfgSecretsIdentity, "secrets-identity", "", "Age identity or SSH private-key path")
+	configSetCmd.Flags().StringVar(&cfgMasterKeyFile, "master-key-file", "", "Local backend master key path")
 	configCmd.AddCommand(configInitCmd)
 	configCmd.AddCommand(configSetCmd)
 }

@@ -4,30 +4,38 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/dominionthedev/lean/internal/globaldir"
 )
 
-// Config is the global lean config stored under the user's config directory.
+// Config is the global workspace map (cwd → profile).
 type Config struct {
-	Workspaces map[string]string `json:"workspaces"` // abs path → profile name
-}
-
-func configDir() (string, error) {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "lean"), nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".config", "lean"), nil
+	Workspaces map[string]string `json:"workspaces"`
 }
 
 func configPath() (string, error) {
-	dir, err := configDir()
+	// Prefer ~/.lean/workspaces.json; fall back to legacy XDG path for migration.
+	p, err := globaldir.WorkspacesPath()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "config.json"), nil
+	if _, err := os.Stat(p); err == nil {
+		return p, nil
+	}
+	// legacy
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		legacy := filepath.Join(xdg, "lean", "config.json")
+		if _, err := os.Stat(legacy); err == nil {
+			return legacy, nil
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		legacy := filepath.Join(home, ".config", "lean", "config.json")
+		if _, err := os.Stat(legacy); err == nil {
+			return legacy, nil
+		}
+	}
+	return p, nil
 }
 
 func Load() (*Config, error) {
@@ -53,25 +61,20 @@ func Load() (*Config, error) {
 }
 
 func Save(c *Config) error {
-	dir, err := configDir()
+	path, err := globaldir.WorkspacesPath()
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	path, err := configPath()
-	if err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0600)
 }
 
-// Remember records that this directory prefers the given profile.
 func Remember(dir, profile string) error {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -85,7 +88,6 @@ func Remember(dir, profile string) error {
 	return Save(c)
 }
 
-// Lookup returns the remembered profile for a directory, if any.
 func Lookup(dir string) (string, bool) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
@@ -99,7 +101,6 @@ func Lookup(dir string) (string, bool) {
 	return p, ok
 }
 
-// Forget removes the workspace mapping for a directory.
 func Forget(dir string) error {
 	abs, err := filepath.Abs(dir)
 	if err != nil {

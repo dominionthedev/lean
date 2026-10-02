@@ -36,6 +36,22 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `lean context apply <name>` — writes all mappings (env profiles resolve inheritance)
   - `lean context list|show|remove|delete`
   - Definitions stored in `.lean/contexts/<name>.json`
+- **lean.toml configuration**
+  - `lean config` / `lean config init` / `lean config set`
+  - default_profile, schema.path, secrets.backend
+- **Advanced schema** (`.lean/schema.toml`)
+  - required, values (enum), default, same_as, depends_on
+  - required_when / deactivated_when conditionals
+  - from: command:|file:|env: sources
+  - secret flag; templates.*.resolves_to
+  - `lean fill` applies defaults / same_as / from sources
+  - `lean validate` uses advanced rules when schema.toml is present
+- **Encrypted secrets**
+  - `lean secret put|get|list|delete|inject|keygen`
+  - Backends: local (AES-256-GCM), gpg, age, ssh (age + SSH keys)
+  - Master key: `lean secret keygen` → `~/.lean/key` (0600), or env, or master_key_file
+  - Global home `~/.lean/` for key, workspaces, templates
+  - Stored under `.lean/secrets/<profile>/`
 
 ---
 

@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+/lean
 
 # Build folders
 dist/
@@ -23,9 +24,11 @@ build/
 # except templates and examples
 !.env.template
 !.env.example
+!.env.schema
 
-# lean state (optional — some teams may want to commit this)
-.lean/
+# lean local-only state
+.lean/backups/
+.lean/secrets/
 
 # lean temp
 .env.tmp

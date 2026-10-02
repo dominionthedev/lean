@@ -221,6 +221,82 @@ lean meta production --description "Main production API" --author DominionDev --
 
 ---
 
+### `lean config`
+Project-level configuration via `lean.toml`.
+```bash
+lean config init
+lean config
+lean config set --default-profile development
+lean config set --secrets-backend gpg --secrets-recipient you@example.com
+```
+
+---
+
+### `lean fill`
+Fill missing keys from schema defaults, `same_as` links, and `from:` sources.
+```bash
+lean fill
+lean fill production --dry-run
+```
+
+---
+
+### `lean secret`
+Encrypt secrets into `.lean/secrets/` (never plain in git).
+```bash
+lean secret keygen                         # writes ~/.lean/key (mode 0600)
+lean secret put JWT_SECRET=supersecret
+lean secret get JWT_SECRET
+lean secret list
+lean secret inject                         # write secrets into .env
+```
+Master key resolution (local backend): `LEAN_MASTER_KEY` env → `secrets.master_key_file` → `~/.lean/key`.
+
+Backends: `local` (AES-256-GCM), `gpg`, `age`, `ssh` (age + SSH pubkey).
+```toml
+# lean.toml — use your SSH key
+[secrets]
+backend = "ssh"
+recipient = "~/.ssh/id_ed25519.pub"
+identity = "~/.ssh/id_ed25519"
+```
+
+---
+
+### Advanced schema (`.lean/schema.toml`)
+```toml
+[keys.DATABASE_URL]
+required = true
+
+[keys.DEBUG]
+values = ["true", "false"]
+default = "false"
+
+[keys.REDIS_URL]
+same_as = "DATABASE_URL"
+
+[keys.SMTP_HOST]
+required_when = { MAIL_DRIVER = "smtp" }
+deactivated_when = { MAIL_DRIVER = "log" }
+
+[keys.JWT_SECRET]
+required = true
+secret = true
+
+[keys.BUILD_SHA]
+from = "command:git rev-parse --short HEAD"
+
+[keys.API_KEY]
+from = "file:.secrets/api_key"
+secret = true
+
+[templates.production]
+resolves_to = ".env.production"
+extends = "base"
+```
+
+---
+
 ### `lean context`
 Multi-file environment bundles. A context maps several sources onto targets and applies them together.
 ```bash

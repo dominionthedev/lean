@@ -44,6 +44,9 @@ func init() {
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(metaCmd)
 	rootCmd.AddCommand(contextCmd)
+	rootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(secretCmd)
+	rootCmd.AddCommand(fillCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(versionCmd)
 }

@@ -185,6 +185,11 @@ var profileEditCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Could not read profile: " + err.Error()))
 			return
 		}
+		engine, err := core.NewEngine()
+		if err != nil {
+			fmt.Println(ui.Fail("Not initialized. Run lean init first."))
+			return
+		}
 		for {
 			var action string
 			form := huh.NewForm(huh.NewGroup(
@@ -220,6 +225,13 @@ var profileEditCmd = &cobra.Command{
 			if err := f.Write(path); err != nil {
 				fmt.Println(ui.Fail("Failed to write profile: " + err.Error()))
 				return
+			}
+			if name == engine.State.Current {
+				if resolved, err := env.Resolve(name); err == nil {
+					_ = resolved.Write(".env")
+				} else {
+					fmt.Println(ui.Warn("Could not sync .env: " + err.Error()))
+				}
 			}
 		}
 	},

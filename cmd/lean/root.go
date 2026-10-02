@@ -16,7 +16,6 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	// Set the version for the root command
 	rootCmd.Version = Version
 	if err := fang.Execute(context.Background(), rootCmd); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -34,6 +33,7 @@ func init() {
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(setCmd)
 	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(profileCmd)
 	rootCmd.AddCommand(templateCmd)
 	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(formatCmd)

@@ -1,0 +1,9 @@
+[lean]
+version = 1
+default_profile = "development"
+
+[schema]
+path = "examples/schema.toml"
+
+[secrets]
+backend = "local"

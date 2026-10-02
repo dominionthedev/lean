@@ -3,6 +3,7 @@ package lean
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/dominionthedev/lean/internal/core"

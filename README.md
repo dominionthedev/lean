@@ -21,6 +21,19 @@ Switch between profiles, protect secrets, restore backups — all from one CLI.
 ---
 
 ## Installation
+
+### NPM
+
+Install lean globally with npm:
+
+```bash
+npm install -g @dominionthedev/lean
+```
+
+Go is not required. The npm package downloads the matching lean release binary for your platform.
+
+### Go
+
 ```bash
 go install github.com/dominionthedev/lean@latest
 ```
@@ -38,6 +51,38 @@ lean apply prod        # .env.prod → .env  (backs up the old .env first)
 lean list              # see all profiles
 lean current           # which profile is active right now
 ```
+
+---
+
+## Templates and examples
+
+Lean supports both `.env.template` and `.env.example` files as environment starting points.
+
+A template describes the variables a profile should contain, while an example can contain safe, non-secret example values.
+
+The repository includes:
+
+```
+examples/
+├── .env.template
+├── .env.example
+├── schema.toml
+└── lean.toml
+```
+
+Create a profile from the included template:
+
+```bash
+lean template create-from examples/.env.template --name development
+```
+
+Or create a profile directly from an example:
+
+```bash
+lean create --name development --from examples/.env.example
+```
+
+The example schema demonstrates required values, allowed values, defaults, and secret fields.
 
 ---
 
@@ -445,10 +490,6 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 <p align="center">
-<a href="https://github.com/dominionthedev">GitHub</a> • <a href="https://dominionthedev.github.io">Website</a>
+<a href="https://github.com/dominionthedev">GitHub</a> • <a href="https://dominiondev.leraniode.org">Website</a>
 </p>
-<p align="center">
-  <a href="https://github.com/dominionthedev/dominionthedev">
-    <img src="https://raw.githubusercontent.com/dominionthedev/dominionthedev/main/assets/watermark-animated.svg" width="700"/>
-  </a>
 </p>

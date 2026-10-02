@@ -3,7 +3,6 @@ package lean
 import (
 	"fmt"
 
-	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/dominionthedev/lean/internal/config"
@@ -38,5 +37,3 @@ func configConfigured() bool {
 	}
 	return config.Exists(path)
 }
-
-var _ = huh.NewForm

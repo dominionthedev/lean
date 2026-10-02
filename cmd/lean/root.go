@@ -43,6 +43,7 @@ func init() {
 	rootCmd.AddCommand(snapshotsCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(metaCmd)
+	rootCmd.AddCommand(contextCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(versionCmd)
 }

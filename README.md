@@ -221,6 +221,25 @@ lean meta production --description "Main production API" --author DominionDev --
 
 ---
 
+### `lean context`
+Multi-file environment bundles. A context maps several sources onto targets and applies them together.
+```bash
+lean context create production --profile production --description "Production API stack"
+lean context add production .env.secret.prod .env.secret
+lean context add production configs/prod.toml config.toml
+lean context show production
+lean context apply production
+lean context list
+```
+```
+✓ .env.production   → .env          (inheritance resolved)
+✓ .env.secret.prod  → .env.secret
+✓ configs/prod.toml → config.toml
+```
+Alias: `lean ctx`
+
+---
+
 ### `lean diff`
 Compare two profiles after resolving inheritance.
 ```bash
@@ -311,11 +330,13 @@ lean version
 lean keeps a `.lean/` folder in your project:
 ```
 .lean/
-  state.json       ← active profile, registered profiles, version
-  backups/         ← timestamped .env snapshots (created on every apply)
+  state.json       ← active profile, registered profiles, metadata, version
+  backups/         ← timestamped + named .env snapshots
+  contexts/        ← multi-file context definitions (*.json)
 ```
 
-`state.json` is safe to commit. The backups folder is local only.
+`state.json` and `contexts/` are safe to commit. The backups folder is local only.
+Workspace mappings live in `~/.config/lean/config.json`.
 
 ---
 

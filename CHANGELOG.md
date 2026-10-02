@@ -30,6 +30,12 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Profile metadata**
   - `lean meta [profile]` — view or set description, author, tags
   - Stored in `.lean/state.json` under `meta`
+- **Contexts** — multi-file environment bundles
+  - `lean context create <name> [--profile] [--description]`
+  - `lean context add <name> <source> <target>`
+  - `lean context apply <name>` — writes all mappings (env profiles resolve inheritance)
+  - `lean context list|show|remove|delete`
+  - Definitions stored in `.lean/contexts/<name>.json`
 
 ---
 

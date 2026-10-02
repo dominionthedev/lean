@@ -63,8 +63,10 @@ var setCmd = &cobra.Command{
 		}
 
 		if target == engine.State.Current {
-			if active, err := env.Parse(path); err == nil {
-				_ = active.Write(".env")
+			if resolved, err := env.Resolve(target); err == nil {
+				_ = resolved.Write(".env")
+			} else {
+				fmt.Println(ui.Warn("Could not sync .env: " + err.Error()))
 			}
 		}
 

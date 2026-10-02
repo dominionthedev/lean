@@ -9,6 +9,7 @@ import (
 	"github.com/dominionthedev/lean/internal/config"
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
+	leanGit "github.com/dominionthedev/lean/internal/git"
 	"github.com/dominionthedev/lean/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -74,6 +75,12 @@ var initCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Failed to initialize: " + err.Error()))
 			return
 		}
+		if osGit, err := leanGit.ProtectProjectFiles(); err != nil {
+			fmt.Println(ui.Fail("Failed to protect environment files in Git: " + err.Error()))
+			return
+		} else if osGit {
+			fmt.Println(ui.Ok("Git exclusions configured for .lean and environment profiles."))
+		}
 		if err := os.MkdirAll(".lean", 0700); err != nil {
 			fmt.Println(ui.Fail("Failed to create .lean: " + err.Error()))
 			return
@@ -119,6 +126,22 @@ var initCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Failed to write .env: " + err.Error()))
 			return
 		}
+
+		profile, err := env.Parse(envPath)
+		if err != nil {
+			fmt.Println(ui.Fail("Failed to prepare safe templates: " + err.Error()))
+			return
+		}
+		stripped := profile.Strip()
+		if err := stripped.Write(".env.template"); err != nil {
+			fmt.Println(ui.Fail("Failed to write .env.template: " + err.Error()))
+			return
+		}
+		if err := stripped.Write(".env.example"); err != nil {
+			fmt.Println(ui.Fail("Failed to write .env.example: " + err.Error()))
+			return
+		}
+
 		if err := engine.SetCurrent(profileName); err != nil {
 			fmt.Println(ui.Fail("Failed to set active profile: " + err.Error()))
 			return
@@ -129,6 +152,7 @@ var initCmd = &cobra.Command{
 		fmt.Printf("   Profile  : %s\n", ui.Active.Render(profileName))
 		fmt.Printf("   Config   : %s\n", ui.Faint(config.LocalPath()))
 		fmt.Printf("   Schema   : %s\n", ui.Faint(cfg.Schema.Path))
+		fmt.Printf("   Templates: %s\n", ui.Faint(".env.template, .env.example (values stripped)"))
 
 		if envFile, err := env.Parse(envPath); err == nil {
 			keys := envFile.Keys()

@@ -22,7 +22,6 @@ var profileDeleteCmd=&cobra.Command{
 		if !engine.ProfileExists(name){fmt.Println(ui.Fail(fmt.Sprintf("Profile '%s' not found.",name)));return}
 		if engine.State.Current==name{fmt.Println(ui.Fail(fmt.Sprintf("Cannot delete active profile '%s'. Apply another profile first.",name)));return}
 		path:=env.ProfilePath(name);if _,err:=os.Stat(path);err!=nil{fmt.Println(ui.Warn(fmt.Sprintf("Profile '%s' no longer exists. Removing it from Lean.",name)));_ = engine.DeleteProfile(name);return}
-		// Refuse deletion while a child depends on this profile.
 		entries,_:=os.ReadDir(filepath.Join(".lean","profiles"))
 		for _,entry:=range entries{if entry.IsDir()||!strings.HasSuffix(entry.Name(),".env"){continue};child:=strings.TrimSuffix(entry.Name(),".env");if child==name{continue};f,err:=env.Parse(filepath.Join(".lean","profiles",entry.Name()));if err==nil&&f.Extends()==name{fmt.Println(ui.Fail(fmt.Sprintf("Cannot delete '%s': profile '%s' extends it.",name,child)));return}}
 		if err:=backup.SnapshotProfile(name,path);err!=nil{fmt.Println(ui.Warn("Could not back up profile: "+err.Error()))}
@@ -32,4 +31,17 @@ var profileDeleteCmd=&cobra.Command{
 		fmt.Println(ui.Ok(fmt.Sprintf("Profile '%s' deleted.",name)))
 	},
 }
-func init(){profileCmd.AddCommand(profileDeleteCmd)}
+
+var profileRestoreCmd=&cobra.Command{
+	Use:"restore NAME",Short:"Restore a deleted profile from its latest Lean backup",Args:cobra.ExactArgs(1),
+	Run:func(cmd *cobra.Command,args []string){
+		name:=args[0];engine,err:=core.NewEngine();if err!=nil{fmt.Println(ui.Fail("Not initialized. Run lean init first."));return}
+		path:=env.ProfilePath(name)
+		if _,err:=os.Stat(path);err==nil{fmt.Println(ui.Warn(fmt.Sprintf("Profile '%s' already exists.",name)));return}
+		if err:=backup.RestoreProfile(name);err!=nil{fmt.Println(ui.Fail("Failed to restore profile: "+err.Error()));return}
+		if err:=engine.AddProfile(name);err!=nil{fmt.Println(ui.Fail("Failed to register restored profile: "+err.Error()));return}
+		fmt.Println(ui.Ok(fmt.Sprintf("Profile '%s' restored.",name)))
+	},
+}
+
+func init(){profileCmd.AddCommand(profileDeleteCmd);profileCmd.AddCommand(profileRestoreCmd)}

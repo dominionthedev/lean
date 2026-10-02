@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dominionthedev/lean/internal/backup"
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
 	"github.com/dominionthedev/lean/internal/ui"
@@ -12,8 +11,12 @@ import (
 )
 
 var deleteProfile string
+
 var deleteCmd = &cobra.Command{
-	Use: "delete KEY", Aliases: []string{"del", "rm"}, Short: "Delete a variable from a profile", Args: cobra.ExactArgs(1),
+	Use:     "delete KEY",
+	Aliases: []string{"del", "rm"},
+	Short:   "Delete a variable from a profile",
+	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		key := args[0]
 		engine, err := core.NewEngine()
@@ -21,7 +24,11 @@ var deleteCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Not initialized. Run lean init first."))
 			return
 		}
-		_ = engine.ScanDisk()
+		if err := engine.ScanDisk(); err != nil {
+			fmt.Println(ui.Fail("Could not scan profiles: " + err.Error()))
+			return
+		}
+
 		target := deleteProfile
 		if target == "" {
 			target = engine.State.Current
@@ -30,12 +37,15 @@ var deleteCmd = &cobra.Command{
 			fmt.Println(ui.Fail("No active profile. Use --profile or apply a profile first."))
 			return
 		}
+
 		path := env.ProfilePath(target)
 		if _, err := os.Stat(path); err != nil {
-			fmt.Println(ui.Warn(fmt.Sprintf("Profile '%s' no longer exists. Removing it from Lean.", target)))
-			_ = engine.DeleteProfile(target)
+			if !confirmStaleProfile(engine, target) {
+				return
+			}
 			return
 		}
+
 		f, err := env.Parse(path)
 		if err != nil {
 			fmt.Println(ui.Fail("Could not read profile: " + err.Error()))
@@ -44,9 +54,6 @@ var deleteCmd = &cobra.Command{
 		if !f.Delete(key) {
 			fmt.Println(ui.Warn(fmt.Sprintf("'%s' was not found in profile '%s'.", key, target)))
 			return
-		}
-		if err := backup.SnapshotProfile(target, path); err != nil {
-			fmt.Println(ui.Warn("Could not back up profile: " + err.Error()))
 		}
 		if err := f.Write(path); err != nil {
 			fmt.Println(ui.Fail("Failed to write profile: " + err.Error()))
@@ -61,4 +68,6 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
-func init() { deleteCmd.Flags().StringVarP(&deleteProfile, "profile", "p", "", "Target profile") }
+func init() {
+	deleteCmd.Flags().StringVarP(&deleteProfile, "profile", "p", "", "Target profile")
+}

@@ -492,4 +492,3 @@ MIT — see [LICENSE](LICENSE).
 <p align="center">
 <a href="https://github.com/dominionthedev">GitHub</a> • <a href="https://dominiondev.leraniode.org">Website</a>
 </p>
-</p>

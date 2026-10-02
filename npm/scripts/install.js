@@ -23,7 +23,11 @@ const arch = {
 }[process.arch];
 
 if (!platform || !arch) {
-  console.error("lean: unsupported platform or architecture:", process.platform, process.arch);
+  console.error(
+    "lean: unsupported platform or architecture:",
+    process.platform,
+    process.arch,
+  );
   process.exit(1);
 }
 
@@ -31,7 +35,8 @@ const version = pkg.version;
 const tag = "v" + version;
 const ext = isWindows ? "zip" : "tar.gz";
 const archive = "lean_" + version + "_" + platform + "_" + arch + "." + ext;
-const baseUrl = "https://github.com/dominionthedev/lean/releases/download/" + tag + "/";
+const baseUrl =
+  "https://github.com/dominionthedev/lean/releases/download/" + tag + "/";
 const url = baseUrl + archive;
 const checksumsUrl = baseUrl + "checksums.txt";
 const destination = path.join(root, archive);
@@ -40,24 +45,37 @@ fs.mkdirSync(binDir, { recursive: true });
 
 function request(location) {
   return new Promise((resolve, reject) => {
-    https.get(location, { headers: { "User-Agent": "lean-npm-installer" } }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume();
-        request(new URL(res.headers.location, location).toString()).then(resolve, reject);
-        return;
-      }
+    https
+      .get(
+        location,
+        { headers: { "User-Agent": "lean-npm-installer" } },
+        (res) => {
+          if (
+            res.statusCode >= 300 &&
+            res.statusCode < 400 &&
+            res.headers.location
+          ) {
+            res.resume();
+            request(new URL(res.headers.location, location).toString()).then(
+              resolve,
+              reject,
+            );
+            return;
+          }
 
-      if (res.statusCode !== 200) {
-        res.resume();
-        reject(new Error("GitHub returned HTTP " + res.statusCode));
-        return;
-      }
+          if (res.statusCode !== 200) {
+            res.resume();
+            reject(new Error("GitHub returned HTTP " + res.statusCode));
+            return;
+          }
 
-      const chunks = [];
-      res.on("data", (chunk) => chunks.push(chunk));
-      res.on("end", () => resolve(Buffer.concat(chunks)));
-      res.on("error", reject);
-    }).on("error", reject);
+          const chunks = [];
+          res.on("data", (chunk) => chunks.push(chunk));
+          res.on("end", () => resolve(Buffer.concat(chunks)));
+          res.on("error", reject);
+        },
+      )
+      .on("error", reject);
   });
 }
 
@@ -68,7 +86,10 @@ function download(location) {
 function run(command, args) {
   const result = spawnSync(command, args, { cwd: root, stdio: "inherit" });
   if (result.error || result.status !== 0) {
-    throw result.error || new Error(command + " exited with status " + result.status);
+    throw (
+      result.error ||
+      new Error(command + " exited with status " + result.status)
+    );
   }
 }
 
@@ -76,14 +97,21 @@ function verifyChecksum(checksums) {
   const line = checksums
     .toString("utf8")
     .split(/\r?\n/)
-    .find((entry) => entry.trim().endsWith("  " + archive) || entry.trim().endsWith(" *" + archive));
+    .find(
+      (entry) =>
+        entry.trim().endsWith("  " + archive) ||
+        entry.trim().endsWith(" *" + archive),
+    );
 
   if (!line) {
     throw new Error("checksum for " + archive + " was not found");
   }
 
   const expected = line.trim().split(/\s+/)[0].toLowerCase();
-  const actual = crypto.createHash("sha256").update(fs.readFileSync(destination)).digest("hex");
+  const actual = crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(destination))
+    .digest("hex");
 
   if (expected !== actual) {
     throw new Error("checksum mismatch for " + archive);
@@ -91,7 +119,9 @@ function verifyChecksum(checksums) {
 }
 
 async function main() {
-  console.log("lean: downloading " + tag + " for " + platform + "/" + arch + "...");
+  console.log(
+    "lean: downloading " + tag + " for " + platform + "/" + arch + "...",
+  );
   await download(url);
   const checksums = await request(checksumsUrl);
   verifyChecksum(checksums);
@@ -112,6 +142,8 @@ async function main() {
 
 main().catch((err) => {
   console.error("lean: installation failed:", err.message);
-  console.error("You can install a release manually from https://github.com/dominionthedev/lean/releases");
+  console.error(
+    "You can install a release manually from https://github.com/dominionthedev/lean/releases",
+  );
   process.exit(1);
 });

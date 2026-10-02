@@ -12,6 +12,7 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.3.0] — 2026-10-02
 
 ### Added
+
 - **Profile inheritance** with cycle detection and resolved values across `apply`, `get`, and `format`
 - `lean diff` for comparing resolved profiles
 - `lean validate` with schema discovery and advanced validation rules
@@ -27,8 +28,8 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **NPM installation** through `@dominionthedev/lean`, with platform-specific release binaries and checksum verification
 - **Templates and examples** in the repository's `examples/` directory
 
-
 ### Added
+
 - **Profile inheritance** — profiles can extend a parent via `# lean:extends <name>`, `# @extends <name>`, or `LEAN_EXTENDS=<name>`
   - `lean apply` resolves the full inheritance chain before writing `.env`
   - `lean get` / `lean format` resolve inherited values
@@ -77,6 +78,7 @@ lean uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.1.0] — 2026-02-28
 
 ### Added
+
 - `lean init` — interactive setup wizard using Huh prompts
   - `--quiet` flag responds playfully and redirects to `lean create`
 - `lean create` — create environment profiles

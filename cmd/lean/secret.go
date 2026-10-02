@@ -199,7 +199,6 @@ var secretInjectCmd = &cobra.Command{
 	},
 }
 
-
 var secretKeygenCmd = &cobra.Command{
 	Use:   "keygen",
 	Short: "Generate ~/.lean/key (mode 0600) for the local secrets backend",

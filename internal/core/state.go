@@ -15,12 +15,12 @@ type ProfileMeta struct {
 }
 
 type State struct {
-	Initialized bool                    `json:"initialized"`
-	Current     string                  `json:"current"`
-	Profiles    []string                `json:"profiles"`
-	Templates   []string                `json:"templates,omitempty"`
-	Meta        map[string]ProfileMeta  `json:"meta,omitempty"`
-	Version     string                  `json:"version"`
+	Initialized bool                   `json:"initialized"`
+	Current     string                 `json:"current"`
+	Profiles    []string               `json:"profiles"`
+	Templates   []string               `json:"templates,omitempty"`
+	Meta        map[string]ProfileMeta `json:"meta,omitempty"`
+	Version     string                 `json:"version"`
 }
 
 const stateDir = ".lean"

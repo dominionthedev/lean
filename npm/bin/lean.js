@@ -3,7 +3,12 @@
 const { spawn } = require("node:child_process");
 const path = require("node:path");
 
-const binary = path.join(__dirname, "..", "bin", process.platform === "win32" ? "lean.exe" : "lean");
+const binary = path.join(
+  __dirname,
+  "..",
+  "bin",
+  process.platform === "win32" ? "lean.exe" : "lean",
+);
 
 const child = spawn(binary, process.argv.slice(2), {
   stdio: "inherit",

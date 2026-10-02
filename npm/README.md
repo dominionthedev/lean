@@ -17,6 +17,7 @@ lean apply dev
 The npm package installs the matching Lean release binary for your platform. Go is not required.
 
 Supported platforms:
+
 - Linux amd64
 - Linux arm64
 - macOS amd64

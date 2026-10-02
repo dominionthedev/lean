@@ -15,24 +15,24 @@ We welcome contributions to lean! To ensure a smooth process, please follow thes
 
 ## Code Style
 
--   Follow `go fmt` for code formatting.
--   Adhere to [Effective Go](https://go.dev/doc/effective_go) practices.
--   Comment your code where necessary, especially for exported functions and complex logic.
+- Follow `go fmt` for code formatting.
+- Adhere to [Effective Go](https://go.dev/doc/effective_go) practices.
+- Comment your code where necessary, especially for exported functions and complex logic.
 
 ## Reporting Bugs
 
 If you find a bug, please open an issue on GitHub with the following information:
 
--   A clear and concise description of the bug.
--   Steps to reproduce the behavior.
--   Expected behavior.
--   Screenshots or error messages (if applicable).
--   Your operating system and Go version.
+- A clear and concise description of the bug.
+- Steps to reproduce the behavior.
+- Expected behavior.
+- Screenshots or error messages (if applicable).
+- Your operating system and Go version.
 
 ## Feature Requests
 
 If you have a feature request, please open an issue on GitHub with the following information:
 
--   A clear and concise description of the feature.
--   The problem it solves.
--   Any alternatives you've considered.
+- A clear and concise description of the feature.
+- The problem it solves.
+- Any alternatives you've considered.

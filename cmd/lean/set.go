@@ -2,7 +2,6 @@ package lean
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/dominionthedev/lean/internal/backup"

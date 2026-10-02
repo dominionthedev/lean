@@ -1,0 +1,22 @@
+.nh
+.TH "LEAN" "1" "Oct 2026" "lean" "lean Manual"
+
+.SH NAME
+lean-update - Synchronize the active profile to .env
+
+.SH SYNOPSIS
+\fBlean update\fP
+
+.SH DESCRIPTION
+Resolve the active profile, including inheritance, and write the resolved environment to .env.
+
+A snapshot of the current .env is taken before replacement. The active profile itself is not changed.
+
+.SH EXAMPLES
+  lean update
+
+.SH SEE ALSO
+\fBlean(1)\fP, \fBlean-apply(1)\fP, \fBlean-current(1)\fP, \fBlean-restore(1)\fP
+
+.SH HISTORY
+2-Oct-2026 Added with the current profile/application model

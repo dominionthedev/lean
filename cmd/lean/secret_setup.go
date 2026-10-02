@@ -3,6 +3,7 @@ package lean
 import (
 	"fmt"
 
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
 	"github.com/dominionthedev/lean/internal/config"
@@ -11,11 +12,11 @@ import (
 
 func init() {
 	secretCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
-		if cmd == secretKeygenCmd || config.Exists("") {
+		if cmd == secretKeygenCmd || configConfigured() {
 			return nil
 		}
 		cfg := config.Default()
-		fmt.Println(ui.Info("Lean has no local configuration yet. Let's configure secret storage first."))
+		fmt.Println(ui.Info("Lean has no configuration yet. Let's configure secret storage first."))
 		if err := configureSecurity(cfg); err != nil {
 			return err
 		}
@@ -26,3 +27,16 @@ func init() {
 		return nil
 	}
 }
+
+func configConfigured() bool {
+	if config.Exists("") {
+		return true
+	}
+	path, err := config.GlobalPath()
+	if err != nil {
+		return false
+	}
+	return config.Exists(path)
+}
+
+var _ = huh.NewForm

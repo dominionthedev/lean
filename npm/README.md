@@ -23,4 +23,8 @@ Supported platforms:
 - macOS arm64
 - Windows amd64
 
+Templates and examples are included in the main repository under `examples/`.
+
 For source code and the full documentation, see the main repository.
+
+Website: https://dominiondev.leraniode.org

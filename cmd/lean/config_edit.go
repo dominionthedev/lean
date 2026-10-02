@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/dominionthedev/lean/internal/config"
 	"github.com/dominionthedev/lean/internal/ui"
@@ -15,7 +16,7 @@ var configEditGlobal bool
 
 var configEditCmd = &cobra.Command{
 	Use:   "edit",
-	Short: "Edit lean.toml interactively",
+	Short: "Edit lean.toml in your editor",
 	Run: func(cmd *cobra.Command, args []string) {
 		path := config.LocalPath()
 		if configEditGlobal {
@@ -41,7 +42,13 @@ var configEditCmd = &cobra.Command{
 }
 
 func openEditor(path string) error {
-	editor := os.Getenv("EDITOR")
+	editor := ""
+	if cfg, err := config.Load(""); err == nil {
+		editor = cfg.Lean.Editor
+	}
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
 	if editor == "" {
 		if runtime.GOOS == "windows" {
 			editor = "notepad"
@@ -55,9 +62,14 @@ func openEditor(path string) error {
 		}
 	}
 	if editor == "" {
-		return fmt.Errorf("could not find an editor; set EDITOR")
+		return fmt.Errorf("could not find an editor; set $EDITOR or lean.editor")
 	}
-	c := exec.Command(editor, path)
+
+	parts := strings.Fields(editor)
+	if len(parts) == 0 {
+		return fmt.Errorf("editor command is empty")
+	}
+	c := exec.Command(parts[0], append(parts[1:], path)...)
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

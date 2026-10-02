@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");
+const crypto = require("node:crypto");
 const { spawnSync } = require("node:child_process");
 
 const pkg = require("../package.json");
@@ -30,17 +31,19 @@ const version = pkg.version;
 const tag = "v" + version;
 const ext = isWindows ? "zip" : "tar.gz";
 const archive = "lean_" + version + "_" + platform + "_" + arch + "." + ext;
-const url = "https://github.com/dominionthedev/lean/releases/download/" + tag + "/" + archive;
+const baseUrl = "https://github.com/dominionthedev/lean/releases/download/" + tag + "/";
+const url = baseUrl + archive;
+const checksumsUrl = baseUrl + "checksums.txt";
 const destination = path.join(root, archive);
 
 fs.mkdirSync(binDir, { recursive: true });
 
-function download(location) {
+function request(location) {
   return new Promise((resolve, reject) => {
     https.get(location, { headers: { "User-Agent": "lean-npm-installer" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
-        download(new URL(res.headers.location, location).toString()).then(resolve, reject);
+        request(new URL(res.headers.location, location).toString()).then(resolve, reject);
         return;
       }
 
@@ -50,12 +53,16 @@ function download(location) {
         return;
       }
 
-      const out = fs.createWriteStream(destination);
-      res.pipe(out);
-      out.on("finish", () => out.close(resolve));
-      out.on("error", reject);
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => resolve(Buffer.concat(chunks)));
+      res.on("error", reject);
     }).on("error", reject);
   });
+}
+
+function download(location) {
+  return request(location).then((data) => fs.writeFileSync(destination, data));
 }
 
 function run(command, args) {
@@ -65,9 +72,29 @@ function run(command, args) {
   }
 }
 
+function verifyChecksum(checksums) {
+  const line = checksums
+    .toString("utf8")
+    .split(/\r?\n/)
+    .find((entry) => entry.trim().endsWith("  " + archive) || entry.trim().endsWith(" *" + archive));
+
+  if (!line) {
+    throw new Error("checksum for " + archive + " was not found");
+  }
+
+  const expected = line.trim().split(/\s+/)[0].toLowerCase();
+  const actual = crypto.createHash("sha256").update(fs.readFileSync(destination)).digest("hex");
+
+  if (expected !== actual) {
+    throw new Error("checksum mismatch for " + archive);
+  }
+}
+
 async function main() {
   console.log("lean: downloading " + tag + " for " + platform + "/" + arch + "...");
   await download(url);
+  const checksums = await request(checksumsUrl);
+  verifyChecksum(checksums);
 
   try {
     if (isWindows) {

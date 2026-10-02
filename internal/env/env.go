@@ -12,14 +12,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const profileDir = ".lean/profiles"
-
 type Entry struct {
 	Key     string
 	Value   string
 	Comment string
 	Blank   bool
 }
+
 type File struct {
 	Entries []Entry
 	Path    string
@@ -31,6 +30,7 @@ func Parse(path string) (*File, error) {
 		return nil, err
 	}
 	defer f.Close()
+
 	var entries []Entry
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -144,9 +144,15 @@ func (f *File) ToJSON() (string, error) {
 	return string(d), e
 }
 
-func (f *File) ToYAML() (string, error) { d, e := yaml.Marshal(f.ToMap()); return string(d), e }
+func (f *File) ToYAML() (string, error) {
+	d, e := yaml.Marshal(f.ToMap())
+	return string(d), e
+}
 
-func (f *File) ToTOML() (string, error) { d, e := toml.Marshal(f.ToMap()); return string(d), e }
+func (f *File) ToTOML() (string, error) {
+	d, e := toml.Marshal(f.ToMap())
+	return string(d), e
+}
 
 func (f *File) ToString() string {
 	var sb strings.Builder
@@ -213,7 +219,9 @@ func (f *File) Merge(parent *File) *File {
 	return merged
 }
 
-func Resolve(profile string) (*File, error) { return resolve(profile, make(map[string]bool), 16) }
+func Resolve(profile string) (*File, error) {
+	return resolve(profile, make(map[string]bool), 16)
+}
 
 func resolve(profile string, visited map[string]bool, depth int) (*File, error) {
 	if depth <= 0 {
@@ -239,13 +247,6 @@ func resolve(profile string, visited map[string]bool, depth int) (*File, error) 
 }
 
 func ProfilePath(name string) string {
-	if name == "current" || name == ".env" {
-		return ".env"
-	}
-	return filepath.Join(profileDir, name+".env")
-}
-
-func LegacyProfilePath(name string) string {
 	if name == "current" || name == ".env" {
 		return ".env"
 	}

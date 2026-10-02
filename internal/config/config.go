@@ -10,22 +10,19 @@ import (
 
 const DefaultPath = ".lean/lean.toml"
 
+const legacyGlobalPath = "lean.toml"
+
 type Config struct {
-	Lean     LeanSection     `toml:"lean"`
-	Profiles ProfilesSection `toml:"profiles"`
-	Schema   SchemaSection   `toml:"schema"`
-	Secrets  SecretsSection  `toml:"secrets"`
-	Output   OutputSection   `toml:"output"`
+	Lean    LeanSection    `toml:"lean"`
+	Schema  SchemaSection  `toml:"schema"`
+	Secrets SecretsSection `toml:"secrets"`
+	Output  OutputSection  `toml:"output"`
 }
 
 type LeanSection struct {
 	Version        int    `toml:"version"`
 	DefaultProfile string `toml:"default_profile"`
 	Editor         string `toml:"editor"`
-}
-
-type ProfilesSection struct {
-	ActiveFile string `toml:"active_file"`
 }
 
 type SchemaSection struct {
@@ -45,16 +42,17 @@ type OutputSection struct {
 
 func Default() *Config {
 	return &Config{
-		Lean:     LeanSection{Version: 1},
-		Profiles: ProfilesSection{ActiveFile: ".env"},
-		Schema:   SchemaSection{Path: ".lean/schema.toml"},
-		Secrets:  SecretsSection{Backend: "local"},
-		Output:   OutputSection{Format: "text"},
+		Lean:   LeanSection{Version: 1},
+		Schema: SchemaSection{Path: ".lean/schema.toml"},
+		Secrets: SecretsSection{
+			Backend: "local",
+		},
+		Output: OutputSection{Format: "text"},
 	}
 }
 
 func GlobalPath() (string, error) {
-	return globaldir.Path("lean.toml")
+	return globaldir.ConfigPath()
 }
 
 func LocalPath() string {
@@ -69,11 +67,16 @@ func Load(path string) (*Config, error) {
 	cfg := Default()
 	global, err := GlobalPath()
 	if err == nil {
-		if err := mergeFile(cfg, global); err != nil && !os.IsNotExist(err) {
+		if err := mergeGlobalFile(cfg, global); err != nil && !os.IsNotExist(err) {
 			return nil, err
 		}
+		if os.IsNotExist(err) {
+			if legacy, legacyErr := globaldir.Path(legacyGlobalPath); legacyErr == nil {
+				_ = mergeGlobalFile(cfg, legacy)
+			}
+		}
 	}
-	if err := mergeFile(cfg, LocalPath()); err != nil && !os.IsNotExist(err) {
+	if err := mergeLocalFile(cfg, LocalPath()); err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 	normalize(cfg)
@@ -93,29 +96,23 @@ func loadFile(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func mergeFile(cfg *Config, path string) error {
+func mergeGlobalFile(cfg *Config, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	var overlay Config
+	var overlay struct {
+		Lean    globalLean    `toml:"lean"`
+		Secrets SecretsSection `toml:"secrets"`
+	}
 	if err := toml.Unmarshal(data, &overlay); err != nil {
 		return err
 	}
 	if overlay.Lean.Version != 0 {
 		cfg.Lean.Version = overlay.Lean.Version
 	}
-	if overlay.Lean.DefaultProfile != "" {
-		cfg.Lean.DefaultProfile = overlay.Lean.DefaultProfile
-	}
 	if overlay.Lean.Editor != "" {
 		cfg.Lean.Editor = overlay.Lean.Editor
-	}
-	if overlay.Profiles.ActiveFile != "" {
-		cfg.Profiles.ActiveFile = overlay.Profiles.ActiveFile
-	}
-	if overlay.Schema.Path != "" {
-		cfg.Schema.Path = overlay.Schema.Path
 	}
 	if overlay.Secrets.Backend != "" {
 		cfg.Secrets.Backend = overlay.Secrets.Backend
@@ -129,6 +126,31 @@ func mergeFile(cfg *Config, path string) error {
 	if overlay.Secrets.MasterKeyFile != "" {
 		cfg.Secrets.MasterKeyFile = overlay.Secrets.MasterKeyFile
 	}
+	return nil
+}
+
+func mergeLocalFile(cfg *Config, path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var overlay struct {
+		Lean   localLean     `toml:"lean"`
+		Schema SchemaSection `toml:"schema"`
+		Output OutputSection `toml:"output"`
+	}
+	if err := toml.Unmarshal(data, &overlay); err != nil {
+		return err
+	}
+	if overlay.Lean.Version != 0 {
+		cfg.Lean.Version = overlay.Lean.Version
+	}
+	if overlay.Lean.DefaultProfile != "" {
+		cfg.Lean.DefaultProfile = overlay.Lean.DefaultProfile
+	}
+	if overlay.Schema.Path != "" {
+		cfg.Schema.Path = overlay.Schema.Path
+	}
 	if overlay.Output.Format != "" {
 		cfg.Output.Format = overlay.Output.Format
 	}
@@ -138,9 +160,6 @@ func mergeFile(cfg *Config, path string) error {
 func normalize(cfg *Config) {
 	if cfg.Lean.Version == 0 {
 		cfg.Lean.Version = 1
-	}
-	if cfg.Profiles.ActiveFile == "" {
-		cfg.Profiles.ActiveFile = ".env"
 	}
 	if cfg.Schema.Path == "" {
 		cfg.Schema.Path = ".lean/schema.toml"
@@ -157,7 +176,27 @@ func Save(path string, cfg *Config) error {
 	if path == "" {
 		path = LocalPath()
 	}
-	data, err := toml.Marshal(cfg)
+
+	var value any = localConfig{
+		Lean: localLean{
+			Version:        cfg.Lean.Version,
+			DefaultProfile: cfg.Lean.DefaultProfile,
+		},
+		Schema: cfg.Schema,
+		Output: cfg.Output,
+	}
+
+	if global, err := GlobalPath(); err == nil && filepath.Clean(path) == filepath.Clean(global) {
+		value = globalConfig{
+			Lean: globalLean{
+				Version: cfg.Lean.Version,
+				Editor:  cfg.Lean.Editor,
+			},
+			Secrets: cfg.Secrets,
+		}
+	}
+
+	data, err := toml.Marshal(value)
 	if err != nil {
 		return err
 	}
@@ -169,6 +208,27 @@ func Save(path string, cfg *Config) error {
 		mode = 0600
 	}
 	return os.WriteFile(path, data, mode)
+}
+
+type localConfig struct {
+	Lean   localLean     `toml:"lean"`
+	Schema SchemaSection `toml:"schema"`
+	Output OutputSection `toml:"output"`
+}
+
+type localLean struct {
+	Version        int    `toml:"version"`
+	DefaultProfile string `toml:"default_profile"`
+}
+
+type globalConfig struct {
+	Lean    globalLean    `toml:"lean"`
+	Secrets SecretsSection `toml:"secrets"`
+}
+
+type globalLean struct {
+	Version int    `toml:"version"`
+	Editor  string `toml:"editor"`
 }
 
 func Exists(path string) bool {

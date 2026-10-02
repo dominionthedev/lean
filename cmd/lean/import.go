@@ -46,6 +46,8 @@ Use --yes to skip the confirmation prompt.`,
 			return
 		}
 
+		_ = engine.ScanDisk()
+
 		if engine.State.Current == profile {
 			fmt.Println(ui.Ok(fmt.Sprintf("Already on '%s'.", profile)))
 			return

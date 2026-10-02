@@ -20,6 +20,7 @@ build/
 # env files — never commit these
 .env
 .env.*
+.lean/profiles/*.env
 
 # except templates and examples
 !.env.template

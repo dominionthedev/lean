@@ -3,7 +3,6 @@ package core
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -86,31 +85,6 @@ func (e *Engine) ScanDisk() error {
 	entries, err := os.ReadDir(".")
 	if err != nil {
 		return err
-	}
-
-	// Older development versions briefly stored profiles under .lean/profiles.
-	// Move those files back to the normal root .env.<name> layout when possible.
-	legacyDir := filepath.Join(".lean", "profiles")
-	if legacyEntries, err := os.ReadDir(legacyDir); err == nil {
-		for _, entry := range legacyEntries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".env") {
-				continue
-			}
-			name := strings.TrimSuffix(entry.Name(), ".env")
-			src := filepath.Join(legacyDir, entry.Name())
-			dst := ProfileFilePath(name)
-			if _, err := os.Stat(dst); os.IsNotExist(err) {
-				if err := os.Rename(src, dst); err != nil {
-					data, readErr := os.ReadFile(src)
-					if readErr == nil {
-						if writeErr := os.WriteFile(dst, data, 0600); writeErr == nil {
-							_ = os.Remove(src)
-						}
-					}
-				}
-			}
-		}
-		_ = os.Remove(legacyDir)
 	}
 
 	known := make(map[string]bool, len(e.State.Profiles))

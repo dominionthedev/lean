@@ -2,8 +2,6 @@ package lean
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
@@ -12,22 +10,30 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use: "list", Short: "List all environment profiles",
+	Use:   "list",
+	Short: "List all environment profiles",
 	Run: func(cmd *cobra.Command, args []string) {
 		engine, err := core.NewEngine()
 		if err != nil {
 			fmt.Println(ui.Fail("Not initialized. Run lean init first."))
 			return
 		}
-		prev := engine.State.Current
-		_ = engine.ScanDisk()
-		if prev != "" && engine.State.Current == "" {
-			fmt.Println(ui.Warn(fmt.Sprintf("Active profile '%s' no longer exists. It has been removed from Lean.", prev)))
+		if err := engine.ScanDisk(); err != nil {
+			fmt.Println(ui.Fail("Could not scan profiles: " + err.Error()))
+			return
 		}
+
+		for _, profile := range append([]string(nil), engine.MissingProfiles()...) {
+			if !confirmStaleProfile(engine, profile) {
+				continue
+			}
+		}
+
 		if len(engine.State.Profiles) == 0 {
 			fmt.Println(ui.Info("No profiles yet. Run lean create to make one."))
 			return
 		}
+
 		fmt.Println(ui.Bolt() + " " + ui.Bold.Render("Profiles"))
 		fmt.Println()
 		for _, profile := range engine.State.Profiles {
@@ -43,7 +49,6 @@ var listCmd = &cobra.Command{
 				fmt.Printf("  %s %s%s\n", ui.Muted.Render("·"), profile, extends)
 			}
 		}
-		_ = os.MkdirAll(filepath.Join(".lean", "profiles"), 0700)
 		fmt.Println()
 	},
 }

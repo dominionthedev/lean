@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/dominionthedev/lean/internal/backup"
 	"github.com/dominionthedev/lean/internal/core"
 	"github.com/dominionthedev/lean/internal/env"
 	"github.com/dominionthedev/lean/internal/ui"
@@ -23,11 +22,9 @@ var editCmd = &cobra.Command{
 			fmt.Println(ui.Fail("Not initialized. Run lean init first."))
 			return
 		}
-		profile := ""
+		profile := engine.State.Current
 		if len(args) > 0 {
 			profile = args[0]
-		} else {
-			profile = engine.State.Current
 		}
 		if profile == "" {
 			fmt.Println(ui.Fail("No profile specified and no active profile set."))
@@ -36,9 +33,7 @@ var editCmd = &cobra.Command{
 
 		path := env.ProfilePath(profile)
 		if _, err := os.Stat(path); err != nil {
-			if !confirmStaleProfile(engine, profile) {
-				return
-			}
+			confirmStaleProfile(engine, profile)
 			return
 		}
 
@@ -58,10 +53,6 @@ var editCmd = &cobra.Command{
 		if editor == "" {
 			fmt.Println(ui.Fail("Could not find an editor. Set EDITOR."))
 			return
-		}
-
-		if err := backup.SnapshotProfile(profile, path); err != nil {
-			fmt.Println(ui.Warn("Could not back up profile: " + err.Error()))
 		}
 
 		c := exec.Command(editor, path)

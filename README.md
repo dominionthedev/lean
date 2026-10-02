@@ -8,568 +8,312 @@
 
 [![CI](https://github.com/dominionthedev/lean/actions/workflows/ci.yml/badge.svg)](https://github.com/dominionthedev/lean/actions/workflows/ci.yml)
 [![Release](https://github.com/dominionthedev/lean/actions/workflows/release.yml/badge.svg)](https://github.com/dominionthedev/lean/actions/workflows/release.yml)
-[![Latest Release](https://img.shields.io/github/v/release/dominionthedev/lean?color=205&label=latest)](https://github.com/dominionthedev/lean/releases)
+[![Latest Release](https://img.shields.io/github/v/release/dominionthedev/lean?label=latest)](https://github.com/dominionthedev/lean/releases)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/dominionthedev/lean)](https://pkg.go.dev/github.com/dominionthedev/lean)
 [![License](https://img.shields.io/github/license/dominionthedev/lean)](LICENSE)
 
-> A lightweight, expressive environment profile manager.
+> A lightweight environment profile manager and orchestrator.
 
-lean keeps your `.env` files safe, organized, and human-friendly.
-Switch between profiles, protect secrets, restore backups — all from one CLI.
-
----
+Lean manages named environment profiles, resolves inheritance, protects secrets, and keeps the application's `.env` synchronized with the active profile.
 
 ## Installation
-
-### NPM
-
-Install lean globally with npm:
-
-```bash
-npm install -g @dominionthedev/lean
-```
-
-Go is not required. The npm package downloads the matching lean release binary for your platform.
-
-### Go
 
 ```bash
 go install github.com/dominionthedev/lean@latest
 ```
 
-Or grab a binary from the [Releases](https://github.com/dominionthedev/lean/releases) page
-(Linux, macOS, Windows — amd64 + arm64).
-
----
+Or install a released binary from the [Releases](https://github.com/dominionthedev/lean/releases) page.
 
 ## Quick start
 
 ```bash
-lean init              # interactive setup — creates your first profile
+lean init
 lean create --name prod
-lean apply prod        # .env.prod → .env  (backs up the old .env first)
-lean list              # see all profiles
-lean current           # which profile is active right now
+lean apply prod        # switch profile and update .env
+lean update            # re-sync .env from the active profile
+lean current
+lean list
 ```
 
----
+## Profiles
+
+A normal profile is a root-level `.env.<name>` file. `.env` is not a profile: it is the resolved environment currently applied to the application.
+
+For example:
+
+```text
+.env.base
+.env.development
+.env.production
+.env                  # current application of the active profile
+```
+
+Switching profiles with `lean apply <profile>` resolves inheritance and writes the result to `.env`. `lean update` performs the same synchronization for the profile that is already active.
+
+Lean snapshots the existing `.env` before an apply/update replacement. Snapshots are the existing rollback mechanism; Lean does not create a separate backup for every profile edit.
+
+### Profile lifecycle
+
+```bash
+lean create --name staging
+lean edit staging
+lean profile edit staging
+lean profile delete staging
+lean profile archive staging
+lean profile restore staging
+lean profile list-archived
+```
+
+Archived profiles are the exception to the root-level layout. They are stored under `.lean/archive/profiles/` and can be restored to `.env.<name>`.
+
+If a registered profile file disappears from disk, Lean reports it as stale and asks before removing the profile from Lean's state. It does not silently delete stale registrations.
 
 ## Templates and examples
 
-Lean supports both `.env.template` and `.env.example` files as environment starting points.
+Lean recognizes `.env.template` and `.env.example` as shareable starting points.
 
-A template describes the variables a profile should contain, while an example can contain safe, non-secret example values.
-
-The repository includes:
-
-```
-examples/
-├── .env.template
-├── .env.example
-├── schema.toml
-└── lean.toml
-```
-
-Create a profile from the included template:
+Lean does not copy profile values into these files during initialization. Values are stripped by default when creating a profile from a template as well:
 
 ```bash
-lean template create-from examples/.env.template --name development
+lean template list
+lean template add path/to/template
+lean template create-from .env.template --name production
 ```
 
-Or create a profile directly from an example:
+You can explicitly preserve values with `--strip=false`, but shareable templates and examples should contain only safe example data. Schema entries marked `secret = true` are the intended way to identify sensitive variables.
+
+## Configuration
+
+Project configuration lives at `.lean/lean.toml`.
+
+User-wide configuration lives at `~/.lean/config.toml`.
+
+Local configuration is project-specific and may contain:
+
+```toml
+[lean]
+version = 1
+default_profile = "development"
+
+[schema]
+path = ".lean/schema.toml"
+
+[output]
+format = "text"
+```
+
+Global configuration contains user-level settings such as the editor and secret backend:
+
+```toml
+[lean]
+version = 1
+editor = "nvim"
+
+[secrets]
+backend = "local"
+```
+
+Secret backend configuration is never written to `.lean/lean.toml` by Lean. The global file is `~/.lean/config.toml`.
 
 ```bash
-lean create --name development --from examples/.env.example
+lean config
+lean config init
+lean config init --global
+lean config edit
+lean config edit --global
+lean config set --default-profile development
+lean config set --global --editor nvim
+lean config set --global --secrets-backend age
 ```
 
-The example schema demonstrates required values, allowed values, defaults, and secret fields.
+The old `~/.lean/lean.toml` location is accepted as a legacy read-only fallback when the new global config does not exist.
 
----
+## Secrets
+
+Lean stores encrypted secret material under the project-local `.lean/secrets/` directory. The encryption backend is configured globally.
+
+Backends are `local`, `gpg`, `age`, and `ssh`.
+
+For the local backend, Lean uses a random master key at `~/.lean/key` unless `secrets.master_key_file` is configured globally. Lean creates the local key automatically when a secret operation first needs it.
+
+```bash
+lean secret put JWT_SECRET=supersecret
+lean secret get JWT_SECRET
+lean secret list
+lean secret inject
+```
+
+You can also explicitly create the local key:
+
+```bash
+lean secret keygen
+```
+
+## Git safety
+
+When `lean init` runs inside a Git worktree, Lean adds these rules to the repository's local `.git/info/exclude`:
+
+```gitignore
+.lean
+.env.*
+!.env.template
+!.env.example
+```
+
+Lean uses `.git/info/exclude` rather than modifying the project's tracked `.gitignore`. This keeps project-local Lean state and environment profiles out of Git while allowing the template and example files to be committed.
+
+The ignore rules do not make a template intrinsically safe. Lean therefore generates `.env.template` and `.env.example` without values by default.
 
 ## Commands
 
 ### `lean init`
 
-Interactive setup wizard. Creates your first profile and writes `.env`.
+Interactive project initialization. It creates the project-local `.lean` state/configuration, schema template, first profile, `.env`, and safe value-stripped template/example files.
+
+### `lean apply [profile]`
+
+Switch the active profile. The profile is resolved, the previous `.env` is snapshotted, and the resolved result becomes `.env`.
+
+### `lean update`
+
+Synchronize `.env` with the active profile without changing which profile is active.
 
 ```bash
-lean init
+lean update
 ```
-
-> Running `lean init --quiet`? lean has feelings about that.
-
----
-
-### `lean create`
-
-Create a new environment profile.
-
-```bash
-lean create --name staging
-lean create --name prod --from .env.template
-lean create --name test  --from .env.dev --strip   # keys only, no values
-lean create --name staging --extends base           # inherit from base
-lean create --interactive                           # guided prompt
-```
-
-| Flag            | Short | Description                           |
-| --------------- | ----- | ------------------------------------- |
-| `--name`        | `-n`  | Profile name                          |
-| `--from`        |       | Copy from a template or existing file |
-| `--strip`       | `-s`  | Strip values (keep keys only)         |
-| `--extends`     |       | Inherit from a parent profile         |
-| `--interactive` | `-i`  | Prompt for name interactively         |
-
----
-
-### `lean apply`
-
-Switch the active environment. Backs up the current `.env` before overwriting.
-
-```bash
-lean apply dev
-lean apply prod
-```
-
----
-
-### `lean set`
-
-Set (or update) a variable in a profile.
-
-```bash
-lean set DEBUG=true
-lean set API_KEY=abc123 --profile prod
-```
-
-If the profile is currently active, `.env` is updated immediately.
-
-| Flag        | Short | Description                      |
-| ----------- | ----- | -------------------------------- |
-| `--profile` | `-p`  | Target profile (default: active) |
-
----
-
-### `lean get`
-
-Get the value of a variable. Output is plain — pipeline-friendly.
-
-```bash
-lean get DEBUG
-lean get DATABASE_URL --profile prod
-lean get SECRET_KEY --profile staging | pbcopy
-```
-
-| Flag        | Short | Description                      |
-| ----------- | ----- | -------------------------------- |
-| `--profile` | `-p`  | Target profile (default: active) |
-
----
-
-### `lean delete`
-
-Remove a variable from a profile.
-
-```bash
-lean delete OLD_KEY
-lean delete LEGACY_TOKEN --profile staging
-```
-
-Aliases: `del`, `rm`
-
-| Flag        | Short | Description                      |
-| ----------- | ----- | -------------------------------- |
-| `--profile` | `-p`  | Target profile (default: active) |
-
----
-
-### `lean list`
-
-List all known profiles. Profiles are stored under `.lean/profiles/`; legacy `.env.*` files are migrated automatically.
-
-```bash
-lean list
-```
-
-```
-⚡ Profiles
-
-  ▶ dev    (active)
-  · prod
-  · staging
-```
-
----
-
-### `lean profile`
-
-Manage profile lifecycle.
-
-```bash
-lean profile delete staging
-lean profile restore staging
-```
-
-Deleting a profile creates a profile backup first. Restore recovers the latest Lean-managed snapshot.
-
----
-
-### `lean edit`
-
-Open a profile in your editor.
-
-```bash
-lean edit
-lean edit prod
-```
-
-Uses `$EDITOR`, or defaults to common editors like `nano` or `vim`.
-
----
-
-### `lean template`
-
-Manage environment templates. Auto-discovers `.env.template` and `.env.example`.
-
-```bash
-lean template list
-lean template add path/to/template
-lean template create-from .env.template --name prod
-```
-
----
-
-### `lean format`
-
-Convert a profile to different formats.
-
-```bash
-lean format --type json
-lean format prod --type yaml
-```
-
-Supported types: `json`, `yaml`, `toml`, `env`.
-
----
 
 ### `lean current`
 
 Show the active profile.
 
-```bash
-lean current
-```
+### `lean list`
 
----
+List registered profiles and reconcile profiles found as root-level `.env.<name>` files.
 
-### `lean restore`
+### `lean set KEY=VALUE`
 
-Restore `.env` from a backup. lean takes a snapshot every time `lean apply` runs.
-Also accepts named snapshot labels.
+Set a value in a profile. When targeting the active profile, Lean also re-resolves it into `.env`.
 
 ```bash
-lean restore              # interactive picker
-lean restore before-migration
-lean restore dev-20250228-143022.env   # direct
+lean set DEBUG=true
+lean set API_KEY=abc123 --profile production
 ```
 
----
+### `lean delete KEY`
 
-### `lean snapshot`
+Delete a variable from a profile. Active profiles are re-resolved into `.env` afterward.
 
-Save a named snapshot of the current `.env`.
+### `lean edit [profile]`
 
-```bash
-lean snapshot before-migration
-lean snapshot before-testing
-lean snapshots                 # list named + automatic
-lean snapshot delete before-testing
-```
+Open a profile in the configured editor, `$EDITOR`, or a detected editor.
 
----
+### `lean profile`
+
+Manage profile lifecycle and archived profiles.
+
+### `lean template`
+
+Manage `.env.template` and `.env.example` templates.
+
+### `lean schema`
+
+Edit the project schema interactively.
+
+### `lean context`
+
+Manage multi-file environment contexts.
+
+### `lean snapshot` / `lean snapshots` / `lean restore`
+
+Create, inspect, and restore `.env` snapshots. Applying or updating a profile automatically snapshots the current `.env` first.
+
+### `lean validate`
+
+Validate a profile against its schema.
+
+### `lean format`
+
+Render a profile as JSON, YAML, TOML, or env-style output.
 
 ### `lean import`
 
-Workspace awareness — lean remembers which profile you last applied in each directory.
-
-```bash
-lean apply api-dev             # remembers ~/Projects/api → api-dev
-cd ~/Projects/api
-lean import                    # suggests / applies api-dev
-lean import --yes              # skip confirmation
-```
-
----
+Use remembered workspace/profile mappings.
 
 ### `lean meta`
 
-View or set profile metadata (description, author, tags).
-
-```bash
-lean meta production
-lean meta production --description "Main production API" --author DominionDev --tags aws,production
-```
-
----
-
-### `lean config`
-
-Configuration lives in `.lean/lean.toml` for a project, with an optional global `~/.lean/lean.toml`. Local configuration overrides global configuration.
-
-```bash
-lean config init                 # interactive: choose local or global
-lean config init --global        # create global config directly
-lean config init --interactive   # configure settings interactively
-lean config
-lean config set --default-profile development
-lean config set --secrets-backend gpg --secrets-recipient you@example.com
-```
-
----
-
-### `lean fill`
-
-Fill missing keys from schema defaults, `same_as` links, and `from:` sources.
-
-```bash
-lean fill
-lean fill production --dry-run
-```
-
----
+Manage profile metadata.
 
 ### `lean man`
 
-```bash
-lean man --generate
-sudo cp man/*.1 /usr/local/share/man/man1/
-lean man
-```
+Generate or display the Lean manual.
 
----
+## Schema
 
-### `lean secret`
-
-Encrypt secrets into `.lean/secrets/` (never plain in git).
-
-```bash
-lean secret keygen                         # writes ~/.lean/key (mode 0600)
-lean secret put JWT_SECRET=supersecret
-lean secret get JWT_SECRET
-lean secret list
-lean secret inject                         # write secrets into .env
-```
-
-Master key resolution (local backend): `~/.lean/key` via `lean secret keygen`, or `secrets.master_key_file`.
-
-Backends: `local` (AES-256-GCM), `gpg`, `age`, `ssh` (age + SSH pubkey).
-
-```toml
-# lean.toml — use your SSH key
-[secrets]
-backend = "ssh"
-recipient = "~/.ssh/id_ed25519.pub"
-identity = "~/.ssh/id_ed25519"
-```
-
----
-
-### Advanced schema (`.lean/schema.toml`)
+The project schema is normally `.lean/schema.toml`:
 
 ```toml
 [keys.DATABASE_URL]
 required = true
+secret = true
 
-[keys.DEBUG]
-values = ["true", "false"]
-default = "false"
-
-[keys.REDIS_URL]
-same_as = "DATABASE_URL"
-
-[keys.SMTP_HOST]
-required_when = { MAIL_DRIVER = "smtp" }
-deactivated_when = { MAIL_DRIVER = "log" }
+[keys.NODE_ENV]
+values = ["development", "test", "production"]
 
 [keys.JWT_SECRET]
 required = true
 secret = true
-
-[keys.BUILD_SHA]
-from = "command:git rev-parse --short HEAD"
-
-[keys.API_KEY]
-from = "file:.secrets/api_key"
-secret = true
-
-[templates.production]
-resolves_to = ".env.production"
-extends = "base"
 ```
 
----
+Schemas can also define defaults, dependencies, `same_as`, conditional requirements, and `from:` sources.
 
-### `lean context`
+## Project and user state
 
-Multi-file environment bundles. A context maps several sources onto targets and applies them together.
+A project normally looks like this:
 
-```bash
-lean context create production --profile production --description "Production API stack"
-lean context add production .env.secret.prod .env.secret
-lean context add production configs/prod.toml config.toml
-lean context show production
-lean context apply production
-lean context list
+```text
+.
+├── .env
+├── .env.development
+├── .env.production
+├── .env.template
+├── .env.example
+└── .lean/
+    ├── lean.toml
+    ├── schema.toml
+    ├── state.json
+    ├── secrets/
+    ├── backups/
+    └── archive/
+        └── profiles/
 ```
 
-```
-✓ .env.production   → .env          (inheritance resolved)
-✓ .env.secret.prod  → .env.secret
-✓ configs/prod.toml → config.toml
-```
+`~/.lean/` is for user-wide Lean state, such as:
 
-Alias: `lean ctx`
-
----
-
-### `lean diff`
-
-Compare two profiles after resolving inheritance.
-
-```bash
-lean diff dev prod
-lean diff current prod
+```text
+~/.lean/
+├── config.toml
+├── key
+└── workspaces.json
 ```
 
-```
-⚡ Diff  development  ↔  production
+Global templates are not the location for project profiles or project schemas. Normal project profiles remain `.env.<name>` at the project root, and project schema/configuration remain under the project's `.lean/` directory. Archived profiles are stored under the project's `.lean/archive/`.
 
-PORT:
-  development: 8080
-  production: 80
+## Safety model
 
-DEBUG:
-  development: true
-  production: false
-```
-
----
-
-### `lean validate`
-
-Check that required keys exist in a profile. Schema is loaded from `--schema`, `.env.schema`, `.env.example`, or `.env.template`.
-
-```bash
-lean validate production
-lean validate staging --schema .env.schema
-```
-
-```
-✓ PORT
-✓ DB_HOST
-✗ JWT_SECRET missing
-✗ SMTP_PASSWORD missing
-```
-
----
-
-### Profile inheritance
-
-Profiles can extend a parent so shared keys live in one place:
-
-```bash
-# .env.base
-APP_NAME=Lean
-PORT=8080
-
-# .env.development
-# lean:extends base
-DEBUG=true
-DB=localhost
-
-# .env.production
-# lean:extends base
-DEBUG=false
-DB=prod.internal
-PORT=80
-```
-
-```bash
-lean create --name staging --extends base
-lean apply production   # merges base + production → .env
-lean get PORT -p development   # 8080 (from base)
-```
-
-Supported directives (first match wins):
-
-- `# lean:extends base`
-- `# @extends base`
-- `LEAN_EXTENDS=base`
-
----
-
-### `lean completion`
-
-Generate shell completion scripts.
-
-```bash
-source <(lean completion bash)
-```
-
-Supported shells: `bash`, `zsh`, `fish`, `powershell`.
-
----
-
-### `lean version`
-
-Print the current version.
-
-```bash
-lean version
-```
-
----
-
-## How it works
-
-lean keeps its managed state inside `.lean/`:
-
-```
-.lean/
-  lean.toml        ← local project configuration
-  state.json       ← active profile, registered profiles, metadata, version
-  profiles/        ← managed environment profiles (*.env)
-  backups/         ← .env snapshots + profile snapshots
-  contexts/        ← multi-file context definitions (*.json)
-```
-
-An optional global configuration is stored at `~/.lean/lean.toml`. Local configuration takes precedence.
-
-`state.json` and `contexts/` are safe to commit. The backups folder is local only.
-Workspace mappings live in `~/.config/lean/config.json`.
-
----
-
-## Safety
-
-- **Atomic writes** — lean never writes directly to `.env`. It writes to a temp file and renames, so a crash mid-write can't corrupt your env.
-- **Backup on apply** — every `lean apply` snapshots the current `.env` before replacing it. Run `lean restore` to get it back.
-- **Profile backups** — Lean snapshots profiles before Lean-managed edits and deletion. `lean profile restore <name>` restores the latest snapshot; edits made outside Lean are not retroactively captured.
-- **`.gitignore` aware** — lean's own `.gitignore` excludes `.env` and `.env.*` by default, keeping secrets off GitHub.
-
----
+- **Profile/application separation:** `.env.<name>` is a profile; `.env` is the resolved application state.
+- **Snapshots on replacement:** applying or updating a profile snapshots the current `.env` before replacement.
+- **Stale-profile confirmation:** missing registered profiles are reported and require confirmation before removal from state.
+- **Secret encryption:** secrets are encrypted through the configured backend.
+- **Local Git protection:** project-local Lean state and `.env.*` files are excluded through `.git/info/exclude` when initialization occurs in a Git worktree.
+- **Safe templates:** initialization and template creation strip values by default, so secrets are not copied into shareable examples.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
----
-
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
----
 
 <p align="center">
 <a href="https://github.com/dominionthedev">GitHub</a> • <a href="https://dominiondev.leraniode.org">Website</a>

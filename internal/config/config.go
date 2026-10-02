@@ -28,7 +28,6 @@ type SecretsSection struct {
 	Backend       string `toml:"backend"`         // local | gpg | age | ssh
 	Recipient     string `toml:"recipient"`       // gpg/age/ssh recipient
 	Identity      string `toml:"identity"`        // age identity / ssh private key
-	MasterKeyEnv  string `toml:"master_key_env"`  // env var name (default LEAN_MASTER_KEY)
 	MasterKeyFile string `toml:"master_key_file"` // optional path; default ~/.lean/key
 }
 

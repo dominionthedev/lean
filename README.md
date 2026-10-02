@@ -241,6 +241,15 @@ lean fill production --dry-run
 
 ---
 
+### `lean man`
+```bash
+lean man --generate
+sudo cp man/*.1 /usr/local/share/man/man1/
+lean man
+```
+
+---
+
 ### `lean secret`
 Encrypt secrets into `.lean/secrets/` (never plain in git).
 ```bash
@@ -250,7 +259,7 @@ lean secret get JWT_SECRET
 lean secret list
 lean secret inject                         # write secrets into .env
 ```
-Master key resolution (local backend): `LEAN_MASTER_KEY` env → `secrets.master_key_file` → `~/.lean/key`.
+Master key resolution (local backend): `~/.lean/key` via `lean secret keygen`, or `secrets.master_key_file`.
 
 Backends: `local` (AES-256-GCM), `gpg`, `age`, `ssh` (age + SSH pubkey).
 ```toml

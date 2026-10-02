@@ -26,10 +26,9 @@ Backends (lean.toml [secrets]):
   age    — age -r <recipient>
   ssh    — age with an SSH public key (same as age)
 
-Master key resolution for local backend (first hit wins):
-  1. env var LEAN_MASTER_KEY (or secrets.master_key_env)
-  2. secrets.master_key_file in lean.toml
-  3. ~/.lean/key  (create with: lean secret keygen)
+Master key for local backend:
+  ~/.lean/key  (create with: lean secret keygen)
+  or secrets.master_key_file in lean.toml
 
 Examples:
   lean secret keygen

@@ -24,7 +24,6 @@ type Store struct {
 	Backend       string
 	Recipient     string
 	Identity      string
-	MasterKeyEnv  string
 	MasterKeyFile string
 }
 
@@ -33,7 +32,6 @@ func NewStore(cfg *config.Config) *Store {
 		Backend:       cfg.Secrets.Backend,
 		Recipient:     cfg.Secrets.Recipient,
 		Identity:      cfg.Secrets.Identity,
-		MasterKeyEnv:  cfg.Secrets.MasterKeyEnv,
 		MasterKeyFile: cfg.Secrets.MasterKeyFile,
 	}
 }
@@ -118,6 +116,20 @@ func Keygen() (string, error) {
 	return path, nil
 }
 
+
+// ensurePrivate refuses to use a key file that is group/world-readable.
+func ensurePrivate(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	mode := info.Mode().Perm()
+	if mode&0077 != 0 {
+		return fmt.Errorf("%s mode is %04o — must be 0600 (only you can read it). Run: chmod 600 %s", path, mode, path)
+	}
+	return nil
+}
+
 func KeyExists() bool {
 	path, err := globaldir.KeyPath()
 	if err != nil {
@@ -150,19 +162,15 @@ func (s *Store) decrypt(data []byte) ([]byte, error) {
 }
 
 // resolveMasterKeyMaterial priority:
-//  1. env (LEAN_MASTER_KEY or secrets.master_key_env)
-//  2. secrets.master_key_file
-//  3. ~/.lean/key
+//  1. secrets.master_key_file (lean.toml override path)
+//  2. ~/.lean/key  (default — create with lean secret keygen)
 func (s *Store) resolveMasterKeyMaterial() ([]byte, error) {
-	envName := s.MasterKeyEnv
-	if envName == "" {
-		envName = "LEAN_MASTER_KEY"
-	}
-	if v := os.Getenv(envName); v != "" {
-		return []byte(v), nil
-	}
 	if s.MasterKeyFile != "" {
-		data, err := os.ReadFile(expandHome(s.MasterKeyFile))
+		path := expandHome(s.MasterKeyFile)
+		if err := ensurePrivate(path); err != nil {
+			return nil, err
+		}
+		data, err := os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("master_key_file: %w", err)
 		}
@@ -172,10 +180,13 @@ func (s *Store) resolveMasterKeyMaterial() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := ensurePrivate(path); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("no master key — run `lean secret keygen` (~/.lean/key), set %s, or secrets.master_key_file", envName)
+			return nil, fmt.Errorf("no master key — run `lean secret keygen` to create ~/.lean/key")
 		}
 		return nil, err
 	}

@@ -15,7 +15,6 @@ var (
 	cfgSecretsBackend   string
 	cfgSecretsRecipient string
 	cfgSecretsIdentity  string
-	cfgMasterKeyEnv     string
 	cfgMasterKeyFile    string
 )
 
@@ -52,7 +51,6 @@ Examples:
 		if cfg.Secrets.Identity != "" {
 			fmt.Printf("  %s  %s\n", ui.Faint("secrets.identity"), cfg.Secrets.Identity)
 		}
-		fmt.Printf("  %s %s\n", ui.Faint("secrets.master_key_env"), orDash(cfg.Secrets.MasterKeyEnv))
 		fmt.Printf("  %s %s\n", ui.Faint("secrets.master_key_file"), orDash(cfg.Secrets.MasterKeyFile))
 		fmt.Println()
 	},
@@ -107,10 +105,6 @@ var configSetCmd = &cobra.Command{
 			cfg.Secrets.Identity = cfgSecretsIdentity
 			changed = true
 		}
-		if cmd.Flags().Changed("master-key-env") {
-			cfg.Secrets.MasterKeyEnv = cfgMasterKeyEnv
-			changed = true
-		}
 		if cmd.Flags().Changed("master-key-file") {
 			cfg.Secrets.MasterKeyFile = cfgMasterKeyFile
 			changed = true
@@ -142,7 +136,6 @@ func init() {
 	configSetCmd.Flags().StringVar(&cfgSecretsBackend, "secrets-backend", "", "Secrets backend: local | gpg | age | ssh")
 	configSetCmd.Flags().StringVar(&cfgSecretsRecipient, "secrets-recipient", "", "GPG/age recipient or SSH .pub path")
 	configSetCmd.Flags().StringVar(&cfgSecretsIdentity, "secrets-identity", "", "Age identity / SSH private key path")
-	configSetCmd.Flags().StringVar(&cfgMasterKeyEnv, "master-key-env", "", "Env var name for local master key")
 	configSetCmd.Flags().StringVar(&cfgMasterKeyFile, "master-key-file", "", "Path to master key file (default ~/.lean/key)")
 
 	configCmd.AddCommand(configInitCmd)

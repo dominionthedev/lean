@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dominionthedev/lean/internal/config"
+	"github.com/dominionthedev/lean/internal/globaldir"
 	"github.com/dominionthedev/lean/internal/secrets"
 	"github.com/dominionthedev/lean/internal/ui"
 )
@@ -22,7 +23,7 @@ func init() {
 		}
 
 		if !configConfigured() {
-			fmt.Println(ui.Info("Lean has no configuration yet. Let's configure secret storage first."))
+			fmt.Println(ui.Info("Lean has no global configuration yet. Let's configure secret storage first."))
 			if err := configureSecurity(cfg); err != nil {
 				return err
 			}
@@ -48,9 +49,9 @@ func init() {
 }
 
 func configConfigured() bool {
-	path, err := config.GlobalPath()
-	if err != nil {
-		return false
+	if path, err := config.GlobalPath(); err == nil && config.Exists(path) {
+		return true
 	}
-	return config.Exists(path)
+	legacy, err := globaldir.Path("lean.toml")
+	return err == nil && config.Exists(legacy)
 }

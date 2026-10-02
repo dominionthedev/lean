@@ -13,7 +13,7 @@ import (
 
 var (
 	templateName  string
-	templateStrip bool
+	templateStrip = true
 )
 
 var templateCmd = &cobra.Command{
@@ -166,7 +166,7 @@ var templateCreateCmd = &cobra.Command{
 
 		suffix := ""
 		if templateStrip {
-			suffix = ui.Faint(" (values stripped)")
+			suffix = ui.Faint(" (values stripped by default)")
 		}
 
 		fmt.Println(ui.Ok(fmt.Sprintf("Profile '%s' created from %s%s.", templateName, selectedTemplate, suffix)))
@@ -175,7 +175,7 @@ var templateCreateCmd = &cobra.Command{
 
 func init() {
 	templateCreateCmd.Flags().StringVarP(&templateName, "name", "n", "", "New profile name")
-	templateCreateCmd.Flags().BoolVarP(&templateStrip, "strip", "s", false, "Strip values (keys only)")
+	templateCreateCmd.Flags().BoolVarP(&templateStrip, "strip", "s", true, "Strip values (keys only; default: true)")
 
 	templateCmd.AddCommand(templateListCmd)
 	templateCmd.AddCommand(templateAddCmd)

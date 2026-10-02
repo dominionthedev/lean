@@ -21,13 +21,18 @@ build/
 .env
 .env.*
 
-# safe, shareable env templates/examples
+# except templates and examples
 !.env.template
 !.env.example
 !.env.schema
 
-# lean project-local state
-.lean/
+# lean local-only state
+.lean/backups/
+.lean/secrets/
+.lean/archive/
+
+# lean temp
+.env.tmp
 
 # Crush
 .crush/

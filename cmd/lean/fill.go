@@ -46,6 +46,8 @@ Examples:
 			return
 		}
 
+		_ = engine.ScanDisk()
+
 		profile := fillProfile
 		if len(args) > 0 {
 			profile = args[0]

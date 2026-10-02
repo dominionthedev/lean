@@ -31,31 +31,36 @@ func configureSecurity(cfg *config.Config) error {
 	cfg.Secrets = config.SecretsSection{Backend: backend}
 	switch backend {
 	case "local":
-		if secrets.KeyExists() {
-			useExisting := true
-			form := huh.NewForm(huh.NewGroup(
-				huh.NewConfirm().Title("Use the existing ~/.lean/key?").Value(&useExisting),
-			))
-			if err := form.Run(); err != nil {
-				return err
-			}
-			if useExisting {
-				return nil
-			}
-		}
-		path, err := secrets.Keygen()
-		if err != nil {
-			return err
-		}
-		fmt.Println(ui.Ok("Created local Lean master key at " + path))
-
+		return configureLocal(&cfg.Secrets)
 	case "gpg":
 		return configureGPG(&cfg.Secrets)
 	case "age":
 		return configureAge(&cfg.Secrets)
 	case "ssh":
 		return configureSSH(&cfg.Secrets)
+	default:
+		return fmt.Errorf("unknown secrets backend %q", backend)
 	}
+}
+
+func configureLocal(dst *config.SecretsSection) error {
+	if secrets.KeyExists() {
+		useExisting := true
+		form := huh.NewForm(huh.NewGroup(
+			huh.NewConfirm().Title("Use the existing ~/.lean/key?").Value(&useExisting),
+		))
+		if err := form.Run(); err != nil {
+			return err
+		}
+		if useExisting {
+			return nil
+		}
+	}
+	path, err := secrets.Keygen()
+	if err != nil {
+		return err
+	}
+	fmt.Println(ui.Ok("Created local Lean master key at " + path))
 	return nil
 }
 
@@ -72,11 +77,11 @@ func configureGPG(dst *config.SecretsSection) error {
 	}
 
 	if action == "existing" {
-		return huh.NewInput().Title("GPG recipient or key ID").Value(&dst.Recipient).Run()
+		return promptInput("GPG recipient or key ID", &dst.Recipient)
 	}
 
 	var identity string
-	if err := huh.NewInput().Title("Identity email/name").Description("Lean uses GPG's default key parameters.").Value(&identity).Run(); err != nil {
+	if err := promptInput("Identity email/name", &identity); err != nil {
 		return err
 	}
 	if identity == "" {
@@ -105,7 +110,10 @@ func configureAge(dst *config.SecretsSection) error {
 		return err
 	}
 	if action == "existing" {
-		return huh.NewInput().Title("age recipient").Value(&dst.Recipient).Run()
+		if err := promptInput("age recipient", &dst.Recipient); err != nil {
+			return err
+		}
+		return promptInput("age identity file", &dst.Identity)
 	}
 
 	home, err := os.UserHomeDir()
@@ -149,7 +157,7 @@ func configureSSH(dst *config.SecretsSection) error {
 	}
 	private := filepath.Join(home, ".ssh", "lean_ed25519")
 	if action == "existing" {
-		if err := huh.NewInput().Title("SSH private key path").Value(&private).Run(); err != nil {
+		if err := promptInput("SSH private key path", &private); err != nil {
 			return err
 		}
 	} else {
@@ -169,12 +177,17 @@ func configureSSH(dst *config.SecretsSection) error {
 	return nil
 }
 
+func promptInput(title string, value *string) error {
+	return huh.NewForm(huh.NewGroup(huh.NewInput().Title(title).Value(value))).Run()
+}
+
 func findAgeRecipient(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
+
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
